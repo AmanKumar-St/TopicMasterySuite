@@ -1,0 +1,361 @@
+{
+  "topic": "JavaScript Decorators, call/apply, method borrowing, and function forwarding",
+  "topic_analysis": {
+    "topic_summary": "These topics center on controlling how JavaScript functions are invoked, how this is bound, and how functions or class members can be reused, wrapped, or forwarded.",
+    "key_mental_models": [
+      "this is a runtime binding determined by how a function is called, not by where it is defined",
+      "call and apply invoke a function with an explicit this value and different argument-passing styles",
+      "method borrowing reuses an object's method by calling it with a different this context",
+      "decorators are higher-order functions that transform classes or class members",
+      "function forwarding means passing functions or arguments to another function while preserving intended behavior and context"
+    ],
+    "common_pitfalls": [
+      "Losing the intended this value when passing object methods as callbacks",
+      "Confusing call and apply argument formats, especially when forwarding arrays of arguments",
+      "Assuming all methods can be safely borrowed without considering internal state or object-specific behavior",
+      "Misunderstanding decorator support, syntax, or whether a decorator returns the original target or a transformed one",
+      "Using arrow functions when a rebindable this value is required"
+    ],
+    "mastery_checklist": [
+      "Explain how call, apply, and bind differ in controlling this and arguments",
+      "Use call or apply to borrow a method from one object and run it on another",
+      "Forward arguments correctly using rest/spread or array-based invocation",
+      "Identify when a function should be passed as a callback and how to preserve its context",
+      "Describe what a decorator receives and what it must return",
+      "Recognize when method borrowing is appropriate and when it may fail"
+    ],
+    "recommended_focus": "For the 10 diagnostic questions, focus first on tracing this binding and argument forwarding, then on recognizing safe method borrowing patterns, and finally on decorator behavior as a transformation function rather than a standalone runtime feature."
+  },
+  "questions": [
+    {
+      "id": 1,
+      "title": "Transparent Caching with Context",
+      "difficulty": "Fundamental",
+      "concepts": [
+        "func.call() / func.apply()",
+        "this context forwarding",
+        "Closure-based cache",
+        "Multi-argument hashing"
+      ],
+      "description": "\n### Problem Statement\nWrite a decorator function `cachingDecorator(func, hashFn)` that wraps any function or object method and caches its return values in a `Map`.\n\n#### Requirements:\n1. When the wrapped function is invoked with arguments that have already been computed, it must return the cached value immediately without invoking `func` again.\n2. **Context Preservation**: It MUST correctly preserve the `this` context when invoked as an object method (e.g. `obj.method(...)`).\n3. **Multi-Argument & Hash Key**: If a custom `hashFn` is passed, use `hashFn(...args)` to determine the cache key. If `hashFn` is omitted, use `JSON.stringify(args)`.\n4. The cache must remain encapsulated within the wrapper closure.\n",
+      "starter_code": "function cachingDecorator(func, hashFn) {\n  const cache = new Map();\n\n  return function(...args) {\n    // TODO: Implement transparent caching with proper context forwarding\n    \n  };\n}",
+      "hints": [
+        {
+          "tier": 1,
+          "title": "Conceptual Nudge",
+          "content": "When a function is called as an object method (`worker.slow(x)`), what happens to `this` if you just do `func(...args)` instead of `func.call(this, ...args)`?"
+        },
+        {
+          "tier": 2,
+          "title": "Approach Strategy",
+          "content": "1. Compute the cache key using `hashFn ? hashFn(...args) : JSON.stringify(args)`.\n2. Check `cache.has(key)`. If true, return `cache.get(key)`.\n3. If false, invoke `func.call(this, ...args)` and store the result in the cache."
+        },
+        {
+          "tier": 3,
+          "title": "Code Skeleton",
+          "content": "```javascript\nfunction cachingDecorator(func, hashFn) {\n  const cache = new Map();\n  return function(...args) {\n    const key = hashFn ? hashFn.apply(this, args) : JSON.stringify(args);\n    if (cache.has(key)) {\n      return cache.get(key);\n    }\n    const result = func.call(this, ...args);\n    cache.set(key, result);\n    return result;\n  };\n}\n```"
+        }
+      ],
+      "test_suite_js": "\nawait test('Basic caching on standalone function', () => {\n    let callCount = 0;\n    function add(a, b) {\n        callCount++;\n        return a + b;\n    }\n    const cachedAdd = cachingDecorator(add);\n    assertEqual(cachedAdd(2, 3), 5, 'First call returns sum');\n    assertEqual(callCount, 1, 'add invoked once');\n    assertEqual(cachedAdd(2, 3), 5, 'Second call returns cached sum');\n    assertEqual(callCount, 1, 'add NOT invoked again on cache hit');\n    assertEqual(cachedAdd(3, 4), 7, 'Different args return correct sum');\n    assertEqual(callCount, 2, 'add invoked on new args');\n});\n\nawait test('Preserves object context (`this`)', () => {\n    let callCount = 0;\n    const worker = {\n        multiplier: 10,\n        calculate(x, y) {\n            callCount++;\n            return (x + y) * this.multiplier;\n        }\n    };\n\n    worker.calculate = cachingDecorator(worker.calculate);\n    assertEqual(worker.calculate(1, 2), 30, 'Correct result using object multiplier');\n    assertEqual(callCount, 1);\n    assertEqual(worker.calculate(1, 2), 30, 'Cached result preserves context computation');\n    assertEqual(callCount, 1);\n});\n\nawait test('Custom hash function support', () => {\n    let calls = 0;\n    function greet(user) {\n        calls++;\n        return `Hello ${user.name}!`;\n    }\n    const cachedGreet = cachingDecorator(greet, u => u.id);\n    assertEqual(cachedGreet({ id: 101, name: 'Alice' }), 'Hello Alice!');\n    assertEqual(calls, 1);\n    assertEqual(cachedGreet({ id: 101, name: 'Alice (updated)' }), 'Hello Alice!', 'Hits cache based on user.id key');\n    assertEqual(calls, 1);\n});\n",
+      "solution_code": "function cachingDecorator(func, hashFn) {\n  const cache = new Map();\n\n  return function(...args) {\n    const key = hashFn ? hashFn.apply(this, args) : JSON.stringify(args);\n    if (cache.has(key)) {\n      return cache.get(key);\n    }\n    const result = func.call(this, ...args);\n    cache.set(key, result);\n    return result;\n  };\n}",
+      "explanation": "By returning a regular function (not an arrow function, or forwarding `this` explicitly), we capture the runtime `this` at call time. `func.call(this, ...args)` or `func.apply(this, args)` transparently executes the original logic as if the decorator wasn't there."
+    },
+    {
+      "id": 2,
+      "title": "Spy Decorator with Call History",
+      "difficulty": "Fundamental",
+      "concepts": [
+        "Decorator metadata properties",
+        "Function object augmentation",
+        "func.apply() forwarding",
+        "Historical call logging"
+      ],
+      "description": "\n### Problem Statement\nCreate a decorator `spy(func)` that records all calls to the function and their arguments on a property `wrapper.calls`.\n\n#### Requirements:\n1. The returned wrapper function must execute `func` with the exact context (`this`) and arguments supplied.\n2. The wrapper must have a `.calls` property which is an Array of arrays, where each inner array contains the arguments passed during that specific invocation (e.g. `[[1, 2], [3, 4]]`).\n3. The wrapper must return whatever value `func` returns.\n4. Calling `wrapper.calls.length` should accurately reflect the total number of invocations.\n",
+      "starter_code": "function spy(func) {\n  function wrapper(...args) {\n    // TODO: Record args into wrapper.calls and forward execution\n  }\n\n  // TODO: Initialize wrapper metadata\n  \n  return wrapper;\n}",
+      "hints": [
+        {
+          "tier": 1,
+          "title": "Conceptual Nudge",
+          "content": "Functions in JavaScript are first-class objects. You can attach custom properties directly to the `wrapper` function, like `wrapper.calls = []`."
+        },
+        {
+          "tier": 2,
+          "title": "Approach Strategy",
+          "content": "Initialize `wrapper.calls = []` before returning the wrapper. Inside the wrapper body, push `args` (or a shallow copy of arguments) into `wrapper.calls` before invoking `func.apply(this, args)`."
+        },
+        {
+          "tier": 3,
+          "title": "Code Skeleton",
+          "content": "```javascript\nfunction spy(func) {\n  function wrapper(...args) {\n    wrapper.calls.push(args);\n    return func.apply(this, args);\n  }\n  wrapper.calls = [];\n  return wrapper;\n}\n```"
+        }
+      ],
+      "test_suite_js": "\nawait test('Records argument history and return values', () => {\n    function multiply(a, b) {\n        return a * b;\n    }\n    const spied = spy(multiply);\n    assertEqual(spied.calls, [], 'Initial calls array is empty');\n    \n    const r1 = spied(2, 3);\n    assertEqual(r1, 6, 'Returns correct calculation');\n    assertEqual(spied.calls.length, 1, 'One call logged');\n    assertEqual(spied.calls[0], [2, 3], 'Arguments logged correctly');\n\n    const r2 = spied(4, 5);\n    assertEqual(r2, 20);\n    assertEqual(spied.calls.length, 2);\n    assertEqual(spied.calls[1], [4, 5]);\n});\n\nawait test('Preserves method context on objects', () => {\n    const user = {\n        name: 'John',\n        say(phrase) {\n            return `${this.name}: ${phrase}`;\n        }\n    };\n    user.say = spy(user.say);\n    assertEqual(user.say('Hello'), 'John: Hello');\n    assertEqual(user.say.calls[0], ['Hello']);\n});\n",
+      "solution_code": "function spy(func) {\n  function wrapper(...args) {\n    wrapper.calls.push(args);\n    return func.apply(this, args);\n  }\n\n  wrapper.calls = [];\n  return wrapper;\n}",
+      "explanation": "Because JavaScript functions are objects, attaching properties like `wrapper.calls` directly to the function reference gives callers introspection capabilities while maintaining complete transparency during execution."
+    },
+    {
+      "id": 3,
+      "title": "Method Borrowing Deep-Dive",
+      "difficulty": "Fundamental",
+      "concepts": [
+        "Array method borrowing",
+        "Array.prototype.slice.call",
+        "Array-like objects",
+        "Object.prototype.hasOwnProperty"
+      ],
+      "description": "\n### Problem Statement\nWrite a utility function `transformArrayLike(arrayLike, mapFn, filterFn)` that performs functional operations on array-like objects (e.g. `arguments`, DOM NodeLists, or custom objects with numeric keys and a `length` property) **without converting the entire object to a native array first**.\n\n#### Requirements:\n1. Borrow `Array.prototype.filter` and `Array.prototype.map` using `.call()` to filter and then map elements directly over `arrayLike`.\n2. If `filterFn` is provided, filter the elements using `[].filter.call(arrayLike, filterFn)`. If omitted, all elements pass.\n3. If `mapFn` is provided, transform the filtered elements using `[].map.call(filtered, mapFn)`. If omitted, elements remain unchanged.\n4. Return a native Array containing the final transformed elements.\n5. Must handle sparse objects or custom objects like `{ 0: 'a', 1: 'b', length: 2 }` correctly.\n",
+      "starter_code": "function transformArrayLike(arrayLike, mapFn, filterFn) {\n  // TODO: Use Array method borrowing with .call() to filter and map over arrayLike\n  \n}",
+      "hints": [
+        {
+          "tier": 1,
+          "title": "Conceptual Nudge",
+          "content": "Native array methods like `Array.prototype.filter` only require the `this` value to have numeric indices and a `.length` property. You can invoke them on anything array-like via `Array.prototype.filter.call(target, fn)`."
+        },
+        {
+          "tier": 2,
+          "title": "Approach Strategy",
+          "content": "First, if `filterFn` is provided, call `Array.prototype.filter.call(arrayLike, filterFn)`. Next, on the filtered result, invoke `Array.prototype.map.call(...)` if `mapFn` is provided."
+        },
+        {
+          "tier": 3,
+          "title": "Code Skeleton",
+          "content": "```javascript\nfunction transformArrayLike(arrayLike, mapFn, filterFn) {\n  let result = filterFn \n    ? Array.prototype.filter.call(arrayLike, filterFn)\n    : Array.prototype.slice.call(arrayLike);\n\n  if (mapFn) {\n    result = Array.prototype.map.call(result, mapFn);\n  }\n  return result;\n}\n```"
+        }
+      ],
+      "test_suite_js": "\nawait test('Transforms pseudo-array objects', () => {\n    const fakeArray = { 0: 10, 1: 25, 2: 30, 3: 5, length: 4 };\n    const filteredAndDoubled = transformArrayLike(\n        fakeArray,\n        x => x * 2,\n        x => x > 15\n    );\n    assertEqual(filteredAndDoubled, [50, 60], 'Filters > 15 and doubles');\n});\n\nawait test('Works on arguments object within a function', () => {\n    function processArgs() {\n        return transformArrayLike(arguments, str => str.toUpperCase(), str => str.startsWith('a'));\n    }\n    const res = processArgs('apple', 'banana', 'avocado', 'cherry');\n    assertEqual(res, ['APPLE', 'AVOCADO']);\n});\n\nawait test('Handles missing filter or map callbacks', () => {\n    const obj = { 0: 'x', 1: 'y', length: 2 };\n    const cloned = transformArrayLike(obj);\n    assertEqual(cloned, ['x', 'y']);\n});\n",
+      "solution_code": "function transformArrayLike(arrayLike, mapFn, filterFn) {\n  let result = filterFn \n    ? Array.prototype.filter.call(arrayLike, filterFn)\n    : Array.prototype.slice.call(arrayLike);\n\n  if (mapFn) {\n    result = Array.prototype.map.call(result, mapFn);\n  }\n  return result;\n}",
+      "explanation": "Method borrowing works because the ECMAScript specification defines many Array methods generically: they only inspect the `length` property and integer-keyed properties on whatever object is provided as `this`."
+    },
+    {
+      "id": 4,
+      "title": "Debounce with Context Preservation",
+      "difficulty": "Intermediate",
+      "concepts": [
+        "Debounce pattern",
+        "setTimeout & clearTimeout",
+        "Context preservation in async callbacks",
+        "Trailing execution"
+      ],
+      "description": "\n### Problem Statement\nImplement a `debounce(func, ms)` decorator that delays invoking `func` until after `ms` milliseconds have elapsed since the last time the debounced function was invoked.\n\n#### Requirements:\n1. Every call to the debounced function resets the countdown timer.\n2. When the timer finally elapses, `func` must be called with the **exact context (`this`)** and **arguments** from the *most recent* invocation.\n3. If called multiple times within the delay period, only the very last call's arguments and context are forwarded to `func`.\n4. The debounced wrapper must expose a `.cancel()` method that clears any pending timer.\n",
+      "starter_code": "function debounce(func, ms) {\n  let timeoutId = null;\n\n  function wrapper(...args) {\n    // TODO: Implement debouncing with timer reset and context preservation\n  }\n\n  // TODO: Add wrapper.cancel() method\n  \n  return wrapper;\n}",
+      "hints": [
+        {
+          "tier": 1,
+          "title": "Conceptual Nudge",
+          "content": "In an asynchronous callback inside `setTimeout`, what is `this`? You must capture the outer `this` (e.g., in a variable or using an arrow function closure) so it isn't lost when the timer fires."
+        },
+        {
+          "tier": 2,
+          "title": "Approach Strategy",
+          "content": "Inside `wrapper`, call `clearTimeout(timeoutId)` first. Then assign `timeoutId = setTimeout(() => { func.apply(this, args); }, ms)`. Define `wrapper.cancel = () => clearTimeout(timeoutId)`."
+        },
+        {
+          "tier": 3,
+          "title": "Code Skeleton",
+          "content": "```javascript\nfunction debounce(func, ms) {\n  let timeoutId = null;\n\n  function wrapper(...args) {\n    if (timeoutId) clearTimeout(timeoutId);\n    timeoutId = setTimeout(() => {\n      func.apply(this, args);\n      timeoutId = null;\n    }, ms);\n  }\n\n  wrapper.cancel = function() {\n    if (timeoutId) {\n      clearTimeout(timeoutId);\n      timeoutId = null;\n    }\n  };\n\n  return wrapper;\n}\n```"
+        }
+      ],
+      "test_suite_js": "\nawait test('Debounces rapid calls and executes only the last one', async () => {\n    let callHistory = [];\n    const fn = debounce((val) => {\n        callHistory.push(val);\n    }, 50);\n\n    fn(1);\n    fn(2);\n    fn(3);\n\n    assertEqual(callHistory.length, 0, 'No immediate execution');\n    await new Promise(r => setTimeout(r, 70));\n    assertEqual(callHistory, [3], 'Only the last invocation executed');\n});\n\nawait test('Preserves `this` context when invoked as an object method', async () => {\n    let executedContext = null;\n    const worker = {\n        name: 'DebounceWorker',\n        run: debounce(function(action) {\n            executedContext = this.name + ':' + action;\n        }, 30)\n    };\n\n    worker.run('task-A');\n    worker.run('task-B');\n\n    await new Promise(r => setTimeout(r, 50));\n    assertEqual(executedContext, 'DebounceWorker:task-B', 'Preserved object instance this context');\n});\n\nawait test('Cancel method clears pending execution', async () => {\n    let called = false;\n    const fn = debounce(() => { called = true; }, 40);\n    fn();\n    fn.cancel();\n    await new Promise(r => setTimeout(r, 60));\n    assertEqual(called, false, 'Execution was successfully cancelled');\n});\n",
+      "solution_code": "function debounce(func, ms) {\n  let timeoutId = null;\n\n  function wrapper(...args) {\n    if (timeoutId) {\n      clearTimeout(timeoutId);\n    }\n    timeoutId = setTimeout(() => {\n      func.apply(this, args);\n      timeoutId = null;\n    }, ms);\n  }\n\n  wrapper.cancel = function() {\n    if (timeoutId) {\n      clearTimeout(timeoutId);\n      timeoutId = null;\n    }\n  };\n\n  return wrapper;\n}",
+      "explanation": "Because arrow functions capture `this` lexically from their enclosing execution context, `() => func.apply(this, args)` retains both the exact object context and the arguments of the latest invocation."
+    },
+    {
+      "id": 5,
+      "title": "Decorator Composition Engine",
+      "difficulty": "Intermediate",
+      "concepts": [
+        "Function composition",
+        "Decorator chaining",
+        "Pipeline execution order",
+        "Context propagation"
+      ],
+      "description": "\n### Problem Statement\nWrite a higher-order function `composeDecorators(...decorators)` that takes any number of decorators and returns a single combined decorator.\n\n#### Requirements:\n1. When the combined decorator wraps a function `fn` (`const decorated = composeDecorators(d1, d2, d3)(fn)`), it must apply them such that `d1` is the outermost wrapper, followed by `d2`, followed by `d3` (i.e. `d1(d2(d3(fn)))`).\n2. When the final decorated function is invoked, the execution order must flow through `d1` $\rightarrow$ `d2` $\rightarrow$ `d3` $\rightarrow$ `fn`, and then unwind return values back up through `d3` $\rightarrow$ `d2` $\rightarrow$ `d1`.\n3. The `this` context and all arguments must be transparently preserved across the entire composition chain.\n4. If no decorators are passed (`composeDecorators()`), it should return the original function unmodified.\n",
+      "starter_code": "function composeDecorators(...decorators) {\n  return function(fn) {\n    // TODO: Apply decorators in right-to-left reduction so the first decorator is outermost\n    \n  };\n}",
+      "hints": [
+        {
+          "tier": 1,
+          "title": "Conceptual Nudge",
+          "content": "To make `d1` outermost and execute first, `d1` must wrap the result of `d2`, which wraps `d3(fn)`. Think about `Array.prototype.reduceRight`."
+        },
+        {
+          "tier": 2,
+          "title": "Approach Strategy",
+          "content": "Use `decorators.reduceRight((wrappedFn, decorator) => decorator(wrappedFn), fn)` to fold the decorators from innermost to outermost."
+        },
+        {
+          "tier": 3,
+          "title": "Code Skeleton",
+          "content": "```javascript\nfunction composeDecorators(...decorators) {\n  return function(fn) {\n    return decorators.reduceRight((acc, dec) => dec(acc), fn);\n  };\n}\n```"
+        }
+      ],
+      "test_suite_js": "\nawait test('Composes decorators in correct outermost-first order', () => {\n    const trace = [];\n\n    const logger1 = (fn) => function(...args) {\n        trace.push('enter-1');\n        const res = fn.apply(this, args);\n        trace.push('exit-1');\n        return res;\n    };\n\n    const logger2 = (fn) => function(...args) {\n        trace.push('enter-2');\n        const res = fn.apply(this, args);\n        trace.push('exit-2');\n        return res;\n    };\n\n    const core = function(x) {\n        trace.push('core:' + x);\n        return x * 2;\n    };\n\n    const decorated = composeDecorators(logger1, logger2)(core);\n    const result = decorated(5);\n\n    assertEqual(result, 10, 'Computes correct result');\n    assertEqual(trace, ['enter-1', 'enter-2', 'core:5', 'exit-2', 'exit-1'], 'Exact onion-skin execution flow');\n});\n\nawait test('Maintains object context across multiple decorators', () => {\n    const doubleResult = (fn) => function(...args) {\n        return fn.apply(this, args) * 2;\n    };\n    const addOffset = (fn) => function(...args) {\n        return fn.apply(this, args) + this.offset;\n    };\n\n    const calculator = {\n        offset: 5,\n        base(n) {\n            return n + 1;\n        }\n    };\n\n    // d1(d2(base)) -> doubleResult(addOffset(base))\n    // (5 + 1) + 5 = 11 -> 11 * 2 = 22\n    calculator.base = composeDecorators(doubleResult, addOffset)(calculator.base);\n    assertEqual(calculator.base(5), 22, 'Context is preserved through nested decorators');\n});\n",
+      "solution_code": "function composeDecorators(...decorators) {\n  return function(fn) {\n    return decorators.reduceRight((acc, dec) => dec(acc), fn);\n  };\n}",
+      "explanation": "`reduceRight` starts with `fn` as the initial accumulator and progressively wraps it with the rightmost decorator through to the leftmost. The leftmost decorator becomes the outermost wrapper."
+    },
+    {
+      "id": 6,
+      "title": "Preserving Function Properties & Metadata",
+      "difficulty": "Advanced",
+      "concepts": [
+        "Object.getOwnPropertyDescriptors",
+        "Object.defineProperties",
+        "Function.name and length preservation",
+        "Proxy trapping"
+      ],
+      "description": "\n### Problem Statement\nWhen functions are wrapped by decorators, custom properties (like `.description`, `.roles`, or default values) and intrinsic properties (`.length`, `.name`) are typically lost.\n\nImplement a utility `wrapWithMetadata(targetFunc, wrapperFunc)` that wraps `targetFunc` with `wrapperFunc` while **fully preserving all own properties and descriptors** of `targetFunc` on the wrapper.\n\n#### Requirements:\n1. When the decorated function is called, it must execute `wrapperFunc` (which forwards to `targetFunc`).\n2. All custom own properties on `targetFunc` (enumerable and non-enumerable, including Symbols) must exist on `wrapperFunc` with identical property descriptors (`writable`, `enumerable`, `configurable`).\n3. Intrinsic properties like `.name` and `.length` should match `targetFunc`'s original name and arity.\n4. Returns the fully configured wrapper function.\n",
+      "starter_code": "function wrapWithMetadata(targetFunc, wrapperFunc) {\n  // TODO: Clone all property descriptors from targetFunc onto wrapperFunc\n  \n  return wrapperFunc;\n}",
+      "hints": [
+        {
+          "tier": 1,
+          "title": "Conceptual Nudge",
+          "content": "A simple `Object.assign` misses non-enumerable properties and symbol properties, and does not preserve custom getters/setters or descriptor flags. `Object.getOwnPropertyDescriptors` retrieves all own descriptors."
+        },
+        {
+          "tier": 2,
+          "title": "Approach Strategy",
+          "content": "Retrieve all descriptors with `Object.getOwnPropertyDescriptors(targetFunc)` and define them onto `wrapperFunc` using `Object.defineProperties(wrapperFunc, descriptors)`. Note that some standard descriptors on functions may have `configurable: true` which allows redefinition."
+        },
+        {
+          "tier": 3,
+          "title": "Code Skeleton",
+          "content": "```javascript\nfunction wrapWithMetadata(targetFunc, wrapperFunc) {\n  const descriptors = Object.getOwnPropertyDescriptors(targetFunc);\n  \n  for (const [prop, descriptor] of Object.entries(descriptors)) {\n    try {\n      Object.defineProperty(wrapperFunc, prop, descriptor);\n    } catch (e) {\n      // Ignore non-configurable native properties if cannot be overwritten\n    }\n  }\n  \n  return wrapperFunc;\n}\n```"
+        }
+      ],
+      "test_suite_js": "\nawait test('Preserves custom static properties and function length', () => {\n    function greet(first, last, title) {\n        return `Hello ${title} ${first} ${last}`;\n    }\n    greet.role = 'admin';\n    greet.version = '1.2.0';\n    Object.defineProperty(greet, 'hiddenId', {\n        value: 'SECRET-999',\n        enumerable: false,\n        writable: false\n    });\n\n    const wrapper = function(...args) {\n        return greet.apply(this, args);\n    };\n\n    const enhanced = wrapWithMetadata(greet, wrapper);\n\n    assertEqual(enhanced.length, 3, 'Preserved function arity (.length)');\n    assertEqual(enhanced.name, 'greet', 'Preserved function name');\n    assertEqual(enhanced.role, 'admin', 'Preserved custom property');\n    assertEqual(enhanced.version, '1.2.0');\n    assertEqual(enhanced.hiddenId, 'SECRET-999', 'Preserved non-enumerable descriptor property');\n});\n\nawait test('Preserves execution behavior', () => {\n    function square(n) { return n * n; }\n    square.category = 'math';\n\n    const wrapped = wrapWithMetadata(square, function(n) {\n        return square.call(this, n) + 1;\n    });\n\n    assertEqual(wrapped(4), 17, 'Wrapper logic runs correctly');\n    assertEqual(wrapped.category, 'math', 'Property preserved');\n});\n",
+      "solution_code": "function wrapWithMetadata(targetFunc, wrapperFunc) {\n  const descriptors = Object.getOwnPropertyDescriptors(targetFunc);\n  \n  for (const [prop, descriptor] of Object.entries(descriptors)) {\n    try {\n      Object.defineProperty(wrapperFunc, prop, descriptor);\n    } catch (e) {\n      // Ignore native non-configurable properties if runtime restricts\n    }\n  }\n  \n  return wrapperFunc;\n}",
+      "explanation": "`Object.getOwnPropertyDescriptors` inspects all properties (enumerable, non-enumerable, symbols) and their descriptor configs (`get`, `set`, `writable`, `configurable`, `enumerable`). Copying these descriptors ensures complete transparency for decorators."
+    },
+    {
+      "id": 7,
+      "title": "Curried Retry Decorator Factory",
+      "difficulty": "Advanced",
+      "concepts": [
+        "Decorator factory pattern",
+        "Currying / partial application",
+        "Async retry logic with backoff",
+        "Error interception"
+      ],
+      "description": "\n### Problem Statement\nWrite a configurable decorator factory `retryDecorator(options)` that wraps asynchronous functions to automatically retry upon failure.\n\n#### Requirements:\n1. `options` is an object: `{ maxRetries = 3, delayMs = 0, shouldRetry = (err) => true }`.\n2. When the decorated function is invoked, if it rejects/throws, it should retry up to `maxRetries` times.\n3. If `delayMs > 0`, wait `delayMs` before each subsequent retry attempt.\n4. If `shouldRetry(err)` returns `false`, do not retry\u2014immediately throw the error.\n5. If all retries are exhausted, reject with the error thrown on the final attempt.\n6. Must preserve `this` context and all arguments across retry attempts.\n",
+      "starter_code": "function retryDecorator(options = {}) {\n  const { maxRetries = 3, delayMs = 0, shouldRetry = () => true } = options;\n\n  return function(func) {\n    return async function(...args) {\n      // TODO: Implement async retry loop with delay and context preservation\n      \n    };\n  };\n}",
+      "hints": [
+        {
+          "tier": 1,
+          "title": "Conceptual Nudge",
+          "content": "A decorator factory returns a decorator function `(func) => wrapper`, which in turn returns the actual wrapper function `async function(...args) { ... }`."
+        },
+        {
+          "tier": 2,
+          "title": "Approach Strategy",
+          "content": "Use a `for` loop from `attempt = 0` to `maxRetries`. In a `try/catch` block, `await func.apply(this, args)`. In `catch (err)`, check if `attempt < maxRetries && shouldRetry(err)`. If so, `await new Promise(r => setTimeout(r, delayMs))`. Otherwise, rethrow `err`."
+        },
+        {
+          "tier": 3,
+          "title": "Code Skeleton",
+          "content": "```javascript\nfunction retryDecorator(options = {}) {\n  const { maxRetries = 3, delayMs = 0, shouldRetry = () => true } = options;\n\n  return function(func) {\n    return async function(...args) {\n      let lastErr;\n      for (let attempt = 0; attempt <= maxRetries; attempt++) {\n        try {\n          return await func.apply(this, args);\n        } catch (err) {\n          lastErr = err;\n          if (attempt >= maxRetries || !shouldRetry(err)) {\n            throw err;\n          }\n          if (delayMs > 0) {\n            await new Promise(r => setTimeout(r, delayMs));\n          }\n        }\n      }\n      throw lastErr;\n    };\n  };\n}\n```"
+        }
+      ],
+      "test_suite_js": "\nawait test('Retries until success within limit', async () => {\n    let attempts = 0;\n    const fetchProfile = async (id) => {\n        attempts++;\n        if (attempts < 3) throw new Error('Network error');\n        return { id, name: 'Alice' };\n    };\n\n    const withRetry = retryDecorator({ maxRetries: 3, delayMs: 10 })(fetchProfile);\n    const result = await withRetry(42);\n\n    assertEqual(result, { id: 42, name: 'Alice' });\n    assertEqual(attempts, 3, 'Took 3 attempts to succeed');\n});\n\nawait test('Fails if maxRetries exceeded', async () => {\n    let attempts = 0;\n    const failAlways = async () => {\n        attempts++;\n        throw new Error('Permanent failure');\n    };\n\n    const withRetry = retryDecorator({ maxRetries: 2, delayMs: 5 })(failAlways);\n    let threw = false;\n    try {\n        await withRetry();\n    } catch (e) {\n        threw = true;\n        assertEqual(e.message, 'Permanent failure');\n    }\n    assertEqual(threw, true, 'Error thrown when retries exhausted');\n    assertEqual(attempts, 3, 'Initial call + 2 retries = 3 attempts total');\n});\n\nawait test('Respects shouldRetry filter condition', async () => {\n    let attempts = 0;\n    const criticalError = async () => {\n        attempts++;\n        const err = new Error('Unauthorized 401');\n        err.status = 401;\n        throw err;\n    };\n\n    const withRetry = retryDecorator({\n        maxRetries: 3,\n        shouldRetry: (err) => err.status !== 401\n    })(criticalError);\n\n    let caught = false;\n    try {\n        await withRetry();\n    } catch (e) {\n        caught = true;\n    }\n    assertEqual(caught, true);\n    assertEqual(attempts, 1, 'Did not retry on fatal 401 status');\n});\n",
+      "solution_code": "function retryDecorator(options = {}) {\n  const { maxRetries = 3, delayMs = 0, shouldRetry = () => true } = options;\n\n  return function(func) {\n    return async function(...args) {\n      let lastErr;\n      for (let attempt = 0; attempt <= maxRetries; attempt++) {\n        try {\n          return await func.apply(this, args);\n        } catch (err) {\n          lastErr = err;\n          if (attempt >= maxRetries || !shouldRetry(err)) {\n            throw err;\n          }\n          if (delayMs > 0) {\n            await new Promise(r => setTimeout(r, delayMs));\n          }\n        }\n      }\n      throw lastErr;\n    };\n  };\n}",
+      "explanation": "Decorator factories encapsulate configuration in the top-level closure, returning a customized decorator that wraps functions with custom policies (like backoff, error filtering, and retry ceilings)."
+    },
+    {
+      "id": 8,
+      "title": "Lexical Scope & Arguments Bug Hunt",
+      "difficulty": "Advanced",
+      "concepts": [
+        "Arrow functions vs function keyword",
+        "arguments shadowing",
+        "Rest parameters (...args)",
+        "Lexical this"
+      ],
+      "description": "\n### Problem Statement\nA junior developer wrote the following buggy decorator intended to measure execution time and log all arguments and return values:\n\n```javascript\n// BUGGY IMPLEMENTATION:\nfunction timeAndLog(fn) {\n  return (...args) => {\n    console.log(\"Calling with args:\", arguments); // BUG 1: Arrow function uses enclosing arguments\n    const start = Date.now();\n    const result = fn.apply(this, arguments);    // BUG 2: 'this' is lexical (often undefined/global) and arguments is wrong\n    const duration = Date.now() - start;\n    return { result, duration, args };\n  };\n}\n```\n\nFix the implementation in `fixedTimeAndLog(fn)` so that:\n1. It works transparently when called as an **object method** (preserving the method caller as `this`).\n2. It correctly captures and returns all passed arguments as a clean Array in `.args`.\n3. It accurately invokes `fn` with the runtime `this` and arguments, returning an object: `{ result, duration, args }`.\n4. It attaches a `.totalExecutionCount` property to the wrapper that tracks total times the wrapper was called.\n",
+      "starter_code": "function fixedTimeAndLog(fn) {\n  // TODO: Fix the lexical scope and arguments bugs\n  function wrapper(...args) {\n    \n  }\n\n  wrapper.totalExecutionCount = 0;\n  return wrapper;\n}",
+      "hints": [
+        {
+          "tier": 1,
+          "title": "Conceptual Nudge",
+          "content": "Arrow functions bind `this` and `arguments` lexically from where they are defined, NOT from where they are called. A method wrapper needs `function(...args)` to receive dynamic runtime `this`."
+        },
+        {
+          "tier": 2,
+          "title": "Approach Strategy",
+          "content": "1. Use `function(...args)` for the wrapper.\n2. Increment `wrapper.totalExecutionCount++`.\n3. Measure `Date.now()`, execute `fn.apply(this, args)` or `fn.call(this, ...args)`.\n4. Return `{ result, duration, args }`."
+        },
+        {
+          "tier": 3,
+          "title": "Code Skeleton",
+          "content": "```javascript\nfunction fixedTimeAndLog(fn) {\n  function wrapper(...args) {\n    wrapper.totalExecutionCount++;\n    const start = Date.now();\n    const result = fn.apply(this, args);\n    const duration = Date.now() - start;\n    return { result, duration, args };\n  }\n  wrapper.totalExecutionCount = 0;\n  return wrapper;\n}\n```"
+        }
+      ],
+      "test_suite_js": "\nawait test('Correctly executes and captures method context & args', () => {\n    const service = {\n        multiplier: 3,\n        compute(x, y) {\n            return (x + y) * this.multiplier;\n        }\n    };\n\n    service.compute = fixedTimeAndLog(service.compute);\n    const report = service.compute(4, 6);\n\n    assertEqual(report.result, 30, 'Proper this context maintained on method call');\n    assertEqual(report.args, [4, 6], 'Arguments array correctly forwarded');\n    assert(typeof report.duration === 'number', 'Duration is calculated');\n    assertEqual(service.compute.totalExecutionCount, 1, 'Total execution count incremented');\n});\n\nawait test('Works on variadic inputs', () => {\n    function sum(...nums) {\n        return nums.reduce((a, b) => a + b, 0);\n    }\n    const tracked = fixedTimeAndLog(sum);\n    const res = tracked(1, 2, 3, 4, 5);\n\n    assertEqual(res.result, 15);\n    assertEqual(res.args, [1, 2, 3, 4, 5]);\n    assertEqual(tracked.totalExecutionCount, 1);\n});\n",
+      "solution_code": "function fixedTimeAndLog(fn) {\n  function wrapper(...args) {\n    wrapper.totalExecutionCount++;\n    const start = Date.now();\n    const result = fn.apply(this, args);\n    const duration = Date.now() - start;\n    return { result, duration, args };\n  }\n\n  wrapper.totalExecutionCount = 0;\n  return wrapper;\n}",
+      "explanation": "Because regular function declarations define dynamic `this` based on the call-site and modern rest parameters (`...args`) produce actual Arrays (unlike the legacy array-like `arguments` object), replacing the arrow function solves both context loss and argument corruption."
+    },
+    {
+      "id": 9,
+      "title": "Async Concurrency Limiter Decorator",
+      "difficulty": "Expert",
+      "concepts": [
+        "Async task queue",
+        "Concurrency limiting",
+        "Promise management",
+        "Context retention in queue"
+      ],
+      "description": "\n### Problem Statement\nIn high-throughput systems, hitting external APIs requires strict concurrency control.\n\nWrite a decorator `concurrencyLimit(func, maxConcurrent)` that limits the number of simultaneously active asynchronous invocations of `func` to `maxConcurrent`.\n\n#### Requirements:\n1. If the number of running invocations is less than `maxConcurrent`, immediately invoke `func` with the provided context and arguments.\n2. If the limit is reached, any additional invocations must be queued and wait until a running invocation finishes (resolves or rejects).\n3. Invocations in the queue must be processed in **FIFO (First-In, First-Out)** order as slots open up.\n4. Each caller receives a Promise that resolves or rejects with the exact outcome of their specific execution.\n5. The decorator must preserve the runtime `this` context for all queued calls.\n",
+      "starter_code": "function concurrencyLimit(func, maxConcurrent) {\n  let activeCount = 0;\n  const queue = [];\n\n  // Helper to run next item in queue\n  function runNext() {\n    // TODO: Dequeue and execute next task if activeCount < maxConcurrent\n  }\n\n  return function(...args) {\n    // TODO: Return a Promise that resolves when this specific invocation completes\n    \n  };\n}",
+      "hints": [
+        {
+          "tier": 1,
+          "title": "Conceptual Nudge",
+          "content": "Return a new `Promise((resolve, reject) => { ... })` for every invocation. Store the `resolve`, `reject`, `context (this)`, and `args` in the queue."
+        },
+        {
+          "tier": 2,
+          "title": "Approach Strategy",
+          "content": "In the wrapper, push `{ context: this, args, resolve, reject }` into `queue`. Then call `runNext()`. In `runNext()`, while `activeCount < maxConcurrent && queue.length > 0`, take an item, increment `activeCount`, run `func.apply(context, args)`, and in `finally`, decrement `activeCount` and call `runNext()`."
+        },
+        {
+          "tier": 3,
+          "title": "Code Skeleton",
+          "content": "```javascript\nfunction concurrencyLimit(func, maxConcurrent) {\n  let activeCount = 0;\n  const queue = [];\n\n  function runNext() {\n    if (activeCount >= maxConcurrent || queue.length === 0) return;\n    const { context, args, resolve, reject } = queue.shift();\n    activeCount++;\n\n    Promise.resolve()\n      .then(() => func.apply(context, args))\n      .then(resolve, reject)\n      .finally(() => {\n        activeCount--;\n        runNext();\n      });\n  }\n\n  return function(...args) {\n    return new Promise((resolve, reject) => {\n      queue.push({ context: this, args, resolve, reject });\n      runNext();\n    });\n  };\n}\n```"
+        }
+      ],
+      "test_suite_js": "\nawait test('Enforces maximum concurrent executions', async () => {\n    let active = 0;\n    let maxObserved = 0;\n\n    const asyncTask = async (id, duration) => {\n        active++;\n        maxObserved = Math.max(maxObserved, active);\n        await new Promise(r => setTimeout(r, duration));\n        active--;\n        return `done-${id}`;\n    };\n\n    const limited = concurrencyLimit(asyncTask, 2);\n\n    const promises = [\n        limited(1, 40),\n        limited(2, 40),\n        limited(3, 40),\n        limited(4, 40)\n    ];\n\n    const results = await Promise.all(promises);\n    assertEqual(results, ['done-1', 'done-2', 'done-3', 'done-4'], 'All tasks completed successfully');\n    assertEqual(maxObserved <= 2, true, `Max concurrent tasks was ${maxObserved}, which is <= 2`);\n});\n\nawait test('Preserves this context for queued calls', async () => {\n    const service = {\n        prefix: 'ID:',\n        async fetchItem(id) {\n            await new Promise(r => setTimeout(r, 20));\n            return this.prefix + id;\n        }\n    };\n\n    service.fetchItem = concurrencyLimit(service.fetchItem, 1);\n\n    const [a, b] = await Promise.all([\n        service.fetchItem(100),\n        service.fetchItem(200)\n    ]);\n\n    assertEqual(a, 'ID:100');\n    assertEqual(b, 'ID:200');\n});\n",
+      "solution_code": "function concurrencyLimit(func, maxConcurrent) {\n  let activeCount = 0;\n  const queue = [];\n\n  function runNext() {\n    if (activeCount >= maxConcurrent || queue.length === 0) {\n      return;\n    }\n\n    const { context, args, resolve, reject } = queue.shift();\n    activeCount++;\n\n    Promise.resolve()\n      .then(() => func.apply(context, args))\n      .then(resolve, reject)\n      .finally(() => {\n        activeCount--;\n        runNext();\n      });\n  }\n\n  return function(...args) {\n    return new Promise((resolve, reject) => {\n      queue.push({ context: this, args, resolve, reject });\n      runNext();\n    });\n  };\n}",
+      "explanation": "By decoupling the caller's Promise resolution from immediate execution, a FIFO queue can control execution pacing while preserving both the return channel (resolve/reject) and the original `this` context."
+    },
+    {
+      "id": 10,
+      "title": "Chained Decorator Diagnostic & Context Recovery",
+      "difficulty": "Expert",
+      "concepts": [
+        "Chained decorators",
+        "Class method context binding",
+        "Detached method references",
+        "Dynamic vs lexical this"
+      ],
+      "description": "\n### Problem Statement\nIn enterprise codebases, decorating class methods often triggers subtle context loss\u2014especially when decorated methods are passed as detached callbacks or chained across multiple layers of decorators (e.g. logging + timing + permission validation).\n\nWrite a unified decorator wrapper `withAutoBindAndPipeline(decorators)` that solves the \"lost this\" problem permanently.\n\n#### Requirements:\n1. `withAutoBindAndPipeline(...decorators)` accepts any number of decorators and returns a method decorator suitable for JS classes and objects.\n2. **Auto-Binding Guarantee**: Even if the decorated method is detached from its instance (e.g. `const detached = instance.method; detached();`), `this` must automatically resolve to the instance it was defined on or invoked with.\n3. **Transparent Pipeline**: All passed decorators must be applied in order, and each decorator in the chain must receive the correct bound context, forward arguments, and preserve the final return value.\n4. If invoked without decorators, it simply ensures the method is auto-bound to its host object on first access.\n",
+      "starter_code": "function withAutoBindAndPipeline(...decorators) {\n  return function(proto, key, descriptor) {\n    // Or if used as a function wrapper:\n    // If called as withAutoBindAndPipeline(...decorators)(fn)\n    // Return a function wrapper that preserves bound context even when detached\n    \n  };\n}",
+      "hints": [
+        {
+          "tier": 1,
+          "title": "Conceptual Nudge",
+          "content": "When a function `const fn = obj.method` is executed detached (`fn()`), standard functions lose `this`. To fix this, you can return a wrapper that binds to the first non-null/non-global object instance encountered or supports explicit `obj.bind(obj)`."
+        },
+        {
+          "tier": 2,
+          "title": "Approach Strategy",
+          "content": "Build a wrapper function that composes the decorators. When the method is accessed on an instance, maintain the link to `this`. For functional use: `const composed = decorators.reduceRight((acc, d) => d(acc), fn); return function(...args) { return composed.apply(this, args); }`."
+        },
+        {
+          "tier": 3,
+          "title": "Code Skeleton",
+          "content": "```javascript\nfunction withAutoBindAndPipeline(...decorators) {\n  return function(fn) {\n    const pipeline = decorators.reduceRight((acc, d) => d(acc), fn);\n    return function(...args) {\n      return pipeline.apply(this, args);\n    };\n  };\n}\n```"
+        }
+      ],
+      "test_suite_js": "\nawait test('Preserves context through 3-tier decorator chain', () => {\n    const log = [];\n\n    const d1 = (fn) => function(...args) {\n        log.push('d1-in:' + this.name);\n        const res = fn.apply(this, args);\n        log.push('d1-out');\n        return res;\n    };\n\n    const d2 = (fn) => function(...args) {\n        log.push('d2-in:' + this.name);\n        const res = fn.apply(this, args);\n        log.push('d2-out');\n        return res;\n    };\n\n    const obj = {\n        name: 'MasterServer',\n        status: 'active',\n        getStatus(detail) {\n            return `${this.name} is ${this.status} (${detail})`;\n        }\n    };\n\n    obj.getStatus = withAutoBindAndPipeline(d1, d2)(obj.getStatus);\n\n    const result = obj.getStatus('node-1');\n    assertEqual(result, 'MasterServer is active (node-1)');\n    assertEqual(log, ['d1-in:MasterServer', 'd2-in:MasterServer', 'd2-out', 'd1-out']);\n});\n\nawait test('Preserves context and return value in async pipelines', async () => {\n    const asyncTimer = (fn) => async function(...args) {\n        const res = await fn.apply(this, args);\n        return { value: res, owner: this.owner };\n    };\n\n    const database = {\n        owner: 'PostgreSQL',\n        async query(sql) {\n            await new Promise(r => setTimeout(r, 10));\n            return `Result for ${sql}`;\n        }\n    };\n\n    database.query = withAutoBindAndPipeline(asyncTimer)(database.query);\n    const output = await database.query('SELECT 1');\n\n    assertEqual(output, { value: 'Result for SELECT 1', owner: 'PostgreSQL' });\n});\n",
+      "solution_code": "function withAutoBindAndPipeline(...decorators) {\n  return function(fn) {\n    const pipeline = decorators.reduceRight((acc, d) => d(acc), fn);\n    return function(...args) {\n      return pipeline.apply(this, args);\n    };\n  };\n}",
+      "explanation": "Composing decorators with strict `.apply(this, args)` propagation across all wrappers ensures zero context leakage, allowing arbitrary depth of decorator nesting while retaining class instance binding and return values."
+    }
+  ]
+}
