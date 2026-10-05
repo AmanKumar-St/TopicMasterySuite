@@ -16,3 +16,6 @@ npm-debug.log*
 # Temp
 tmp/
 *.tmp
+
+#secret
+config.yaml
