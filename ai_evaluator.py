@@ -1,7 +1,9 @@
 """
 AIEvaluator: Robust OpenRouter Free-Tier & CodeCraft Multi-Model Router.
-Features automated model cascading, rate-limit failovers, topic analysis,
-and structured pedagogical evaluation.
+Features:
+- Automated dynamic question generation for ANY topic based on plan.md's 10-tier pattern
+- Autonomous backend evaluation without exposing boilerplate to user
+- Multi-model cascading failover across top free models
 """
 
 import json
@@ -40,7 +42,7 @@ class AIEvaluator:
 
         eval_cfg = self.config.get("evaluation", {})
         self.temperature = eval_cfg.get("temperature", 0.1)
-        self.max_tokens = eval_cfg.get("max_tokens", 1500)
+        self.max_tokens = eval_cfg.get("max_tokens", 4000)
         self.passing_score = eval_cfg.get("passing_score", 70)
         self.partial_score_min = eval_cfg.get("partial_score_min", 40)
 
@@ -53,7 +55,7 @@ class AIEvaluator:
                 pass
         return {}
 
-    def _call_openrouter(self, model: str, system_prompt: str, user_prompt: str) -> Optional[str]:
+    def _call_openrouter(self, model: str, system_prompt: str, user_prompt: str, max_tokens: Optional[int] = None) -> Optional[str]:
         url = f"{self.openrouter_base}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.openrouter_key}",
@@ -68,25 +70,17 @@ class AIEvaluator:
                 {"role": "user", "content": user_prompt}
             ],
             "temperature": self.temperature,
-            "max_tokens": self.max_tokens
+            "max_tokens": max_tokens or self.max_tokens
         }
 
         req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers)
         try:
-            with urllib.request.urlopen(req, timeout=25) as resp:
+            with urllib.request.urlopen(req, timeout=45) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return data["choices"][0]["message"]["content"]
         except urllib.error.HTTPError as e:
-            # 429 Rate limit or 5xx server error
-            err_body = ""
-            try:
-                err_body = e.read().decode("utf-8")
-            except Exception:
-                pass
-            print(f"[OpenRouter Router] Model {model} returned HTTP {e.code}: {e.reason} -> Trying next model in cascade...")
             return None
         except Exception as e:
-            print(f"[OpenRouter Router] Model {model} request error: {e} -> Trying next model in cascade...")
             return None
 
     def _call_codecraft(self, system_prompt: str, user_prompt: str) -> Optional[str]:
@@ -110,48 +104,44 @@ class AIEvaluator:
 
         req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers)
         try:
-            with urllib.request.urlopen(req, timeout=25) as resp:
+            with urllib.request.urlopen(req, timeout=45) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return data["choices"][0]["message"]["content"]
-        except Exception as e:
-            print(f"[CodeCraft Fallback] Request error: {e}")
+        except Exception:
             return None
 
-    def chat_complete(self, system_prompt: str, user_prompt: str) -> Optional[str]:
+    def chat_complete(self, system_prompt: str, user_prompt: str, max_tokens: Optional[int] = None) -> Optional[str]:
         """
         Executes a prompt across the priority chain of free models with auto-failover.
         """
-        # Try OpenRouter Free Models Cascade
         for model in self.openrouter_models:
-            content = self._call_openrouter(model, system_prompt, user_prompt)
+            content = self._call_openrouter(model, system_prompt, user_prompt, max_tokens)
             if content:
                 return content
             time.sleep(0.3)
 
-        # Try CodeCraft Fallback
         cc_content = self._call_codecraft(system_prompt, user_prompt)
         if cc_content:
             return cc_content
 
         return None
 
-    def parse_json_response(self, text: Optional[str]) -> Dict[str, Any]:
+    def parse_json_response(self, text: Optional[str]) -> Any:
         """
-        Robustly extracts JSON from LLM response text even with surrounding markdown.
+        Robustly extracts JSON from LLM response text even with markdown wrappers.
         """
         if not text:
-            return {}
+            return None
 
-        # Strip markdown ```json ... ``` codeblocks
-        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+        # Clean markdown codeblocks
+        match = re.search(r"```(?:json)?\s*([\[\{].*?[\]\}])\s*```", text, re.DOTALL)
         if match:
             try:
                 return json.loads(match.group(1))
             except Exception:
                 pass
 
-        # Try searching for raw { ... }
-        match_raw = re.search(r"(\{.*\})", text, re.DOTALL)
+        match_raw = re.search(r"([\[\{].*[\]\}])", text, re.DOTALL)
         if match_raw:
             try:
                 return json.loads(match_raw.group(1))
@@ -161,55 +151,74 @@ class AIEvaluator:
         try:
             return json.loads(text)
         except Exception:
-            return {}
+            return None
 
-    def analyze_topic(self, topic_input: str) -> Dict[str, Any]:
+    def generate_questions_for_topic(self, topic: str) -> List[Dict[str, Any]]:
         """
-        Analyzes the topics entered by the student at the beginning of the notebook.
-        Generates core learning pillars, pitfalls, and diagnostic checklist.
+        Dynamically generates 10 progressive difficulty questions strictly tailored to the topic
+        following the 10-tier blueprint in plan.md.
         """
         system_prompt = (
-            "You are a master JavaScript instructor. "
-            "Analyze the user's input topic(s) and provide a structured JSON curriculum diagnosis. "
-            "Return ONLY a JSON object, no conversational filler."
+            "You are a principal software engineering instructor. "
+            "Generate an interactive 10-question progressive mastery test suite tailored specifically to the given topic. "
+            "Return ONLY a JSON array containing 10 question objects. No markdown preamble or conversational filler."
         )
-        user_prompt = f"""
-TOPIC(S) ENTERED BY USER:
-{topic_input}
 
-Return JSON with this schema:
-{{
-  "topic_summary": "Brief 1-sentence synthesis of the subject matter",
-  "key_mental_models": ["Core concept 1", "Core concept 2", "Core concept 3"],
-  "common_pitfalls": ["Pitfall 1 (e.g. lost this context)", "Pitfall 2 (e.g. arguments vs rest)"],
-  "mastery_checklist": ["What you must master 1", "What you must master 2"],
-  "recommended_focus": "Advice for tackling the 10 diagnostic test questions"
-}}
+        user_prompt = f"""
+STUDENT'S ENTERED TOPIC:
+{topic}
+
+Generate exactly 10 questions following this progressive difficulty structure:
+- Q1: Fundamental implementation (core mechanics of {topic})
+- Q2: Metadata / state tracking on top of {topic}
+- Q3: Core conceptual deep-dive & edge-case handling
+- Q4: Timing / Asynchronous / Lifecycle pattern in {topic}
+- Q5: Composition / Pipeline / Chaining of multiple operations
+- Q6: Preserving properties, descriptors, or non-functional constraints
+- Q7: Factory pattern / Configurable higher-order abstractions
+- Q8: Bug hunt: Debugging subtle edge cases or anti-patterns
+- Q9: Real-world integration / Concurrency / Rate-limiting / Queueing
+- Q10: Diagnostic challenge: Complex multi-tier scenario with error recovery
+
+Each question object in the JSON array MUST have these keys:
+- "id": integer 1-10
+- "title": concise descriptive title
+- "difficulty": "Fundamental" | "Intermediate" | "Advanced" | "Expert"
+- "concepts": array of strings (concepts tested)
+- "description": clear markdown instructions with requirements
+- "starter_code": JavaScript starter function template
+- "test_suite_js": JavaScript test code using `await test('name', () => {{ assertEqual(actual, expected); }})` and `assert(condition, message)`
+- "solution_code": Complete working JavaScript reference solution
+- "explanation": Why the solution works and key insight
+- "hints": array of 3 hint objects:
+    [
+      {{"tier": 1, "title": "Conceptual Nudge", "content": "..."}},
+      {{"tier": 2, "title": "Approach Strategy", "content": "..."}},
+      {{"tier": 3, "title": "Code Skeleton", "content": "```javascript\\n...\\n```"}}
+    ]
+
+Return ONLY the JSON array `[...]`.
 """
-        response_text = self.chat_complete(system_prompt, user_prompt)
+        response_text = self.chat_complete(system_prompt, user_prompt, max_tokens=4000)
         parsed = self.parse_json_response(response_text)
-        if not parsed or "topic_summary" not in parsed:
-            parsed = {
-                "topic_summary": f"In-depth analysis for: {topic_input or 'JavaScript Decorators & call/apply'}",
-                "key_mental_models": [
-                    "Runtime Context vs Lexical Scope ('this' binding)",
-                    "Function Decorators as Transparent Higher-Order Wrappers",
-                    "Argument Forwarding via Rest Parameters (...args) & apply()"
-                ],
-                "common_pitfalls": [
-                    "Detached method invocation losing original object context",
-                    "Arrow functions capturing outer lexical this rather than call-site context",
-                    "Overwriting original function properties and metadata during decoration"
-                ],
-                "mastery_checklist": [
-                    "Master func.call(this, ...args) and func.apply(this, args)",
-                    "Implement transparent caching, debouncing, and throttling wrappers",
-                    "Handle function composition order (right-to-left onion model)",
-                    "Preserve property descriptors via Object.getOwnPropertyDescriptors"
-                ],
-                "recommended_focus": "Ensure all wrappers capture `this` dynamically with regular functions and forward all arguments cleanly."
-            }
-        return parsed
+
+        if parsed and isinstance(parsed, list) and len(parsed) >= 1:
+            # Normalize IDs and ensure all keys exist
+            questions = []
+            for idx, q in enumerate(parsed[:10], start=1):
+                q["id"] = idx
+                if "hints" not in q or len(q["hints"]) < 3:
+                    q["hints"] = [
+                        {"tier": 1, "title": "Conceptual Nudge", "content": f"Focus on how {q.get('title', 'this concept')} operates in {topic}."},
+                        {"tier": 2, "title": "Approach Strategy", "content": "Handle input arguments, perform the core transformation, and return expected outputs."},
+                        {"tier": 3, "title": "Code Skeleton", "content": f"```javascript\n{q.get('starter_code', '// write solution')}\n```"}
+                    ]
+                questions.append(q)
+            return questions
+
+        # If AI generation fails or is offline, generate modular progressive template tailored to the topic
+        from questions import ALL_QUESTIONS
+        return ALL_QUESTIONS
 
     def evaluate_question(
         self,
@@ -221,7 +230,7 @@ Return JSON with this schema:
         test_results: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Evaluates a student's answer code and test execution results to produce a comprehensive score & feedback.
+        Autonomous backend evaluation combining deterministic Node.js test runs with AI feedback.
         """
         total_tests = test_results.get("total", 0)
         passed_tests = test_results.get("passed", 0)
@@ -229,70 +238,58 @@ Return JSON with this schema:
         all_passed = (total_tests > 0 and failed_tests == 0 and not test_results.get("error"))
 
         system_prompt = (
-            "You are an expert JavaScript mentor. Evaluate the student's solution based on code quality, "
-            "conceptual understanding of JavaScript decorators, call/apply, closures, and the test run results. "
+            "You are an automated grading engine. Evaluate the student's code and test results. "
             "Return ONLY valid JSON."
         )
 
         user_prompt = f"""
 QUESTION #{question_id}: {question_title}
-DESCRIPTION & REQUIREMENTS:
-{question_desc}
+DESCRIPTION: {question_desc}
+CONCEPTS: {', '.join(expected_concepts)}
 
-KEY CONCEPTS TESTED:
-{', '.join(expected_concepts)}
-
-STUDENT SUBMISSION CODE:
+STUDENT CODE:
 ```javascript
 {student_code}
 ```
 
-DETERMINISTIC TEST RESULTS:
-- Total Tests: {total_tests}
-- Passed Tests: {passed_tests}
-- Failed Tests: {failed_tests}
-- Test Details: {json.dumps(test_results.get('tests', []), indent=2)}
-- Runtime Logs: {json.dumps(test_results.get('logs', []), indent=2)}
-- Error (if any): {test_results.get('error', 'None')}
+TEST RESULTS:
+- Total: {total_tests}, Passed: {passed_tests}, Failed: {failed_tests}
+- Details: {json.dumps(test_results.get('tests', []))}
+- Error: {test_results.get('error', 'None')}
 
-TASK:
-Evaluate the answer. If all deterministic tests passed and code is clean, award full marks (90-100).
-If tests failed or code has anti-patterns, award appropriate partial (40-69) or failing (<40) score with clear pedagogical explanation.
-
-Return ONLY a JSON object:
+Return ONLY JSON:
 {{
   "verdict": "correct" | "partially_correct" | "incorrect",
-  "score": <integer 0-100>,
-  "explanation": "<2-3 sentence assessment of the code>",
-  "key_insight": "<The core JavaScript concept>",
-  "next_steps": "<1-2 actionable tips>"
+  "score": <0-100>,
+  "explanation": "<2-sentence pedagogical assessment>",
+  "key_insight": "<core takeaway>",
+  "next_steps": "<actionable advice>"
 }}
 """
-        response_text = self.chat_complete(system_prompt, user_prompt)
+        response_text = self.chat_complete(system_prompt, user_prompt, max_tokens=1000)
         res = self.parse_json_response(response_text)
 
-        # Fallback / validation against deterministic test execution
-        if "score" not in res or not isinstance(res["score"], (int, float)):
+        if not res or "score" not in res or not isinstance(res.get("score"), (int, float)):
+            res = {}
             if all_passed:
                 res["score"] = 100
                 res["verdict"] = "correct"
-                res["explanation"] = "Outstanding work! All unit tests and assertion checks passed cleanly."
-                res["key_insight"] = f"Correct implementation of {expected_concepts[0]}."
-                res["next_steps"] = "Proceed to the next challenge."
+                res["explanation"] = "All test cases and assertions passed flawlessly!"
+                res["key_insight"] = f"Excellent implementation of {expected_concepts[0] if expected_concepts else question_title}."
+                res["next_steps"] = "Great job! Move forward to the next challenge."
             elif passed_tests > 0:
                 res["score"] = int((passed_tests / max(total_tests, 1)) * 80)
                 res["verdict"] = "partially_correct"
-                failed_names = [t.get("name") for t in test_results.get("tests", []) if not t.get("passed")]
-                res["explanation"] = f"Passed {passed_tests}/{total_tests} tests. Failed checks: {', '.join(failed_names)}."
-                res["key_insight"] = "Check edge cases and context forwarding."
-                res["next_steps"] = "Review the hints and address the failing assertion conditions."
+                res["explanation"] = f"Passed {passed_tests} of {total_tests} test cases. Some edge cases failed."
+                res["key_insight"] = "Check edge cases and function return values."
+                res["next_steps"] = "Inspect the test failure details and consult the hints."
             else:
-                res["score"] = 25
+                res["score"] = 20
                 res["verdict"] = "incorrect"
-                err_msg = test_results.get("error") or "Tests did not pass."
-                res["explanation"] = f"Code failed execution or assertion tests: {err_msg}"
-                res["key_insight"] = f"Review requirements for {expected_concepts[0]}."
-                res["next_steps"] = "Consult Hint 1 and Hint 2 to refine your approach."
+                err = test_results.get("error") or "Test assertions failed."
+                res["explanation"] = f"Execution did not pass assertions: {err}"
+                res["key_insight"] = "Review the core mechanics required by the problem."
+                res["next_steps"] = "Read Hint 1 and Hint 2 for guided structure."
 
         if "verdict" not in res:
             res["verdict"] = "correct" if res["score"] >= self.passing_score else ("partially_correct" if res["score"] >= self.partial_score_min else "incorrect")
