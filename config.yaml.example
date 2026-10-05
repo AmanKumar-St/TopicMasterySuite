@@ -1,0 +1,29 @@
+ai_backend:
+  primary: "openrouter"
+  fallback: "codecraft"
+  openrouter:
+    api_key: "${OPENROUTER_API_KEY}"
+    base_url: "https://openrouter.ai/api/v1"
+    models:
+      - "qwen/qwen3.8-27b:free"
+      - "google/gemma-4-31b-it:free"
+      - "nvidia/nemotron-3.5-lightning:free"
+      - "cohere/north-mini-code:free"
+      - "openrouter/free"
+  codecraft:
+    api_key: "${CODECRAFT_API_KEY}"
+    base_url: "https://api.codecraft.ai/v1"
+    models:
+      - "codecraft-coder-v1"
+
+evaluation:
+  temperature: 0.1
+  max_tokens: 1500
+  passing_score: 70
+  partial_score_min: 40
+  max_attempts_before_reveal: 3
+
+notebook:
+  kernel: "python3"
+  node_path: "node"
+  timeout_seconds: 10

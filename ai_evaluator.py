@@ -14,6 +14,9 @@ from typing import Any, Dict, List, Optional
 import urllib.request
 import urllib.error
 import yaml
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class AIEvaluator:
