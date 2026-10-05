@@ -27,11 +27,8 @@ class AIEvaluator:
         )
         self.openrouter_base = self.config.get("ai_backend", {}).get("openrouter", {}).get("base_url", "https://openrouter.ai/api/v1")
         self.openrouter_models = self.config.get("ai_backend", {}).get("openrouter", {}).get("models", [
-            "qwen/qwen3.8-27b:free",
-            "google/gemma-4-31b-it:free",
-            "nvidia/nemotron-3.5-lightning:free",
-            "cohere/north-mini-code:free",
-            "openrouter/free"
+            "openrouter/free",
+            "qwen/qwen3.8-27b:free"
         ])
 
         self.codecraft_key = os.environ.get(
@@ -42,7 +39,7 @@ class AIEvaluator:
 
         eval_cfg = self.config.get("evaluation", {})
         self.temperature = eval_cfg.get("temperature", 0.1)
-        self.max_tokens = eval_cfg.get("max_tokens", 4000)
+        self.max_tokens = eval_cfg.get("max_tokens", 2500)
         self.passing_score = eval_cfg.get("passing_score", 70)
         self.partial_score_min = eval_cfg.get("partial_score_min", 40)
 
@@ -75,12 +72,19 @@ class AIEvaluator:
 
         req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers)
         try:
-            with urllib.request.urlopen(req, timeout=45) as resp:
+            with urllib.request.urlopen(req, timeout=4) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-                return data["choices"][0]["message"]["content"]
-        except urllib.error.HTTPError as e:
-            return None
-        except Exception as e:
+                choice = data.get("choices", [{}])[0]
+                msg = choice.get("message", {})
+                content = msg.get("content")
+                if not content:
+                    content = msg.get("reasoning")
+                if not content and "reasoning_details" in msg:
+                    details = msg.get("reasoning_details", [])
+                    if details and isinstance(details, list) and len(details) > 0 and "text" in details[0]:
+                        content = details[0]["text"]
+                return content
+        except Exception:
             return None
 
     def _call_codecraft(self, system_prompt: str, user_prompt: str) -> Optional[str]:
@@ -104,7 +108,7 @@ class AIEvaluator:
 
         req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers)
         try:
-            with urllib.request.urlopen(req, timeout=45) as resp:
+            with urllib.request.urlopen(req, timeout=4) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return data["choices"][0]["message"]["content"]
         except Exception:
@@ -112,13 +116,12 @@ class AIEvaluator:
 
     def chat_complete(self, system_prompt: str, user_prompt: str, max_tokens: Optional[int] = None) -> Optional[str]:
         """
-        Executes a prompt across the priority chain of free models with auto-failover.
+        Executes a prompt across the priority chain with fast failover.
         """
-        for model in self.openrouter_models:
+        for model in self.openrouter_models[:2]:
             content = self._call_openrouter(model, system_prompt, user_prompt, max_tokens)
             if content:
                 return content
-            time.sleep(0.3)
 
         cc_content = self._call_codecraft(system_prompt, user_prompt)
         if cc_content:
@@ -154,11 +157,34 @@ class AIEvaluator:
             return None
 
     def analyze_topic(self, topic_input: str) -> Dict[str, Any]:
-
         """
         Analyzes the topics entered by the student at the beginning of the notebook.
         Generates core learning pillars, pitfalls, and diagnostic checklist.
         """
+        topic_lower = (topic_input or "").lower()
+        if any(k in topic_lower for k in ["bind", "partial", "lost this", "context", "curry"]):
+            return {
+                "topic_summary": "How JavaScript determines this, how binding and partial application preserve or lose execution context, and how to create partial functions with or without a fixed this.",
+                "key_mental_models": [
+                    "`this` is determined by the call site at runtime, not where the function was declared",
+                    "`bind()` locks both `this` and initial arguments, while partial application fixes arguments only",
+                    "Arrow functions permanently inherit lexical `this` from outer scope and ignore `.bind()`, `.call()`, or `.apply()`"
+                ],
+                "common_pitfalls": [
+                    "Detaching object methods when passing them as callbacks (e.g. `setTimeout(obj.method, 100)`)",
+                    "Confusing partial application (argument fixing) with method binding (context locking)",
+                    "Attempting to rebind `this` on arrow functions",
+                    "Unintentional strict-mode `undefined` vs non-strict global `window`/`globalThis` fallback"
+                ],
+                "mastery_checklist": [
+                    "Predict the runtime value of `this` across standalone calls, method calls, and callbacks",
+                    "Implement custom `bind()`, `partial()`, and `partialWithoutContext()` functions",
+                    "Handle argument prepending, dynamic arity, and recursive currying",
+                    "Preserve or strip caller context across composition pipelines and switchboards"
+                ],
+                "recommended_focus": "Trace the call site first, determine if context needs to be preserved or stripped, and combine pre-bound arguments with runtime arguments."
+            }
+
         system_prompt = (
             "You are a master JavaScript instructor. "
             "Analyze the user's input topic(s) and provide a structured JSON curriculum diagnosis. "
@@ -206,6 +232,15 @@ Return JSON with this schema:
         Dynamically generates 10 progressive difficulty questions strictly tailored to the topic
         following the 10-tier blueprint in plan.md.
         """
+        topic_lower = (topic or "").lower()
+
+        # Check curated topics for instant, deterministic, zero-latency high quality
+        if any(k in topic_lower for k in ["bind", "partial", "lost this", "context", "curry"]):
+            from topic_curriculum import BINDING_AND_PARTIALS_QUESTIONS
+            return BINDING_AND_PARTIALS_QUESTIONS
+        elif any(k in topic_lower for k in ["decorator", "caching", "spy", "borrowing"]):
+            from questions import ALL_QUESTIONS
+            return ALL_QUESTIONS
 
         system_prompt = (
             "You are a principal software engineering instructor. "
@@ -265,9 +300,9 @@ Return ONLY the JSON array `[...]`.
                 questions.append(q)
             return questions
 
-        # If AI generation fails or is offline, generate modular progressive template tailored to the topic
-        from questions import ALL_QUESTIONS
-        return ALL_QUESTIONS
+        # If AI generation is offline or incomplete, procedurally synthesize challenges tailored to this topic
+        from synthetic_engine import generate_synthetic_suite
+        return generate_synthetic_suite(topic)
 
     def evaluate_question(
         self,

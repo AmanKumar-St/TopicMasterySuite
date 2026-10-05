@@ -1,11 +1,12 @@
 """
-Rebuilds decorator_mastery_test.ipynb as a clean, interactive dynamic learning suite.
+Rebuilds decorator_mastery_test.ipynb cleanly without file conflict locks.
 """
 
 import nbformat as nbf
+from topic_curriculum import BINDING_AND_PARTIALS_QUESTIONS
 
 
-def generate_interactive_notebook():
+def build_notebook(topic: str = "function binding , lost this , partial function , Going partial without context", filename: str = "decorator_mastery_test.ipynb"):
     nb = nbf.v4.new_notebook()
     nb.metadata["kernelspec"] = {
         "display_name": "Python 3",
@@ -19,34 +20,64 @@ def generate_interactive_notebook():
 
     cells = []
 
-    header_md = """# 🚀 Interactive Dynamic Mastery Assessment Suite
-### Powered by Autonomous AI Grading & Node.js Subprocess Sandbox
+    # Title Markdown Cell
+    cells.append(nbf.v4.new_markdown_cell(f"""# 🚀 Dynamic JavaScript Mastery Suite
+### Topic: {topic}
+Run the setup cell below, then solve each question and run its `evaluate(...)` cell for instant feedback.
+"""))
 
-Welcome to the **Dynamic Assessment Suite**! 
+    # Setup cell
+    topic_cell = f"""# === TOPIC SETUP CELL ===
+# Change the topic anytime and re-run this cell to switch topics without save conflicts!
+from notebook_engine import set_topic, show, evaluate, show_scoreboard
 
-#### 📋 How It Works:
-1. **Enter Your Topic Below:** Type whatever programming topic you studied today (e.g. *JavaScript Decorators & call/apply*, *React useEffect & Lifecycle*, *Async/Await & Promises*, etc.).
-2. **Click "Analyze Topic & Generate 10 Challenges":** The AI will analyze the topic and dynamically generate **10 custom progressive challenges** (Fundamentals $\\rightarrow$ Advanced $\\rightarrow$ Bug Hunt $\\rightarrow$ Expert Diagnostic) matching the blueprint in `plan.md`.
-3. **Solve & Submit:** Write your solution in each question's interactive code area and click **Submit & Evaluate**.
-4. **Autonomous Backend Evaluation:** All testing runs autonomously in the backend (Node.js test execution + AI pedagogical evaluation) without exposing evaluation boilerplate to you.
+TOPIC = \"\"\"{topic}\"\"\"
+
+set_topic(TOPIC)
 """
-    cells.append(nbf.v4.new_markdown_cell(header_md))
+    cells.append(nbf.v4.new_code_cell(topic_cell))
 
-    launch_code = """# === LAUNCH INTERACTIVE MASTERY APPLICATION ===
-from notebook_engine import MasteryApp
+    for q in BINDING_AND_PARTIALS_QUESTIONS:
+        qid = q["id"]
+        title = q["title"]
+        starter = q.get("starter_code", "// Write your JavaScript code here")
 
-# Initialize and launch dynamic assessment harness
-app = MasteryApp()
-app.launch()
+        # Question Display Cell
+        view_cell = f"""# === QUESTION {qid}: {title} ===
+show({qid})
 """
-    cells.append(nbf.v4.new_code_cell(launch_code))
+        cells.append(nbf.v4.new_code_cell(view_cell))
+
+        # Answer Solution Cell
+        ans_cell = f"""# === QUESTION {qid} ANSWER CELL ===
+# Write your JavaScript solution below:
+q{qid}_solution = \"\"\"{starter}\"\"\"
+"""
+        cells.append(nbf.v4.new_code_cell(ans_cell))
+
+        # Evaluation Cell
+        eval_cell = f"""# === QUESTION {qid} EVALUATION CELL ===
+# Run this cell to check your solution for Question {qid}:
+evaluate({qid}, q{qid}_solution)
+"""
+        cells.append(nbf.v4.new_code_cell(eval_cell))
+
+    # Scoreboard
+    cells.append(nbf.v4.new_markdown_cell("""---
+## 🏆 Overall Mastery Scoreboard
+Run the cell below to see your aggregate performance across all 10 challenges.
+"""))
+    cells.append(nbf.v4.new_code_cell("""# === FINAL MASTERY SCOREBOARD CELL ===
+show_scoreboard()
+"""))
 
     nb["cells"] = cells
-    return nb
+
+    with open(filename, "w", encoding="utf-8") as f:
+        nbf.write(nb, f)
+
+    print(f"[OK] Rebuilt {filename} with {len(cells)} cells successfully.")
 
 
 if __name__ == "__main__":
-    nb = generate_interactive_notebook()
-    with open("decorator_mastery_test.ipynb", "w", encoding="utf-8") as f:
-        nbf.write(nb, f)
-    print("[OK] Rebuilt decorator_mastery_test.ipynb cleanly.")
+    build_notebook()

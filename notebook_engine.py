@@ -63,14 +63,14 @@ def _save_progress(progress: dict):
         json.dump(progress, f, indent=2)
 
 
-def generate_suite(topic: str, notebook_path: str = "decorator_mastery_test.ipynb"):
+def set_topic(topic: str):
     """
-    Analyzes the topic, dynamically creates 10 customized questions,
-    and updates the active Jupyter Notebook with dedicated markdown, answer, and check cells.
+    Sets the active topic, analyzes it, loads the 10 tailored challenges into memory,
+    and updates session state without file save conflicts.
     """
     display(HTML(f"""
     <div style="font-family: sans-serif; padding: 14px; background: #EFF6FF; border-left: 4px solid #3B82F6; border-radius: 6px; color: #1E40AF; margin-bottom: 12px;">
-        ⏳ <strong>Analyzing '{topic}'...</strong> Generating 10 tailored challenges in the background...
+        ⏳ <strong>Configuring topic: '{topic}'...</strong> Loading 10 tailored challenges into session...
     </div>
     """))
 
@@ -78,7 +78,7 @@ def generate_suite(topic: str, notebook_path: str = "decorator_mastery_test.ipyn
     questions = ai_evaluator.generate_questions_for_topic(topic)
     _save_suite(questions, topic_analysis, topic)
 
-    # 1. Render Topic Analysis Blueprint in the output
+    # Render Topic Analysis Blueprint in the output
     models_li = "".join([f"<li style='margin-bottom:4px;'>{m}</li>" for m in topic_analysis.get('key_mental_models', [])])
     pitfalls_li = "".join([f"<li style='margin-bottom:4px;'>⚠️ {p}</li>" for p in topic_analysis.get('common_pitfalls', [])])
     checklist_li = "".join([f"<li style='margin-bottom:4px;'>☑️ {c}</li>" for c in topic_analysis.get('mastery_checklist', [])])
@@ -87,7 +87,7 @@ def generate_suite(topic: str, notebook_path: str = "decorator_mastery_test.ipyn
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); color: #F8FAFC; border-radius: 10px; padding: 20px; margin: 12px 0 20px 0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; color:#38BDF8;">🧠 Topic Blueprint: {topic}</h3>
-            <span style="background:#0284C7; color:white; font-size:12px; font-weight:bold; padding:3px 10px; border-radius:12px;">10 Cells Generated</span>
+            <span style="background:#0284C7; color:white; font-size:12px; font-weight:bold; padding:3px 10px; border-radius:12px;">10 Questions Ready</span>
         </div>
         <p style="color:#CBD5E1; margin:8px 0 14px 0; font-size:14px; font-style:italic;">"{topic_analysis.get('topic_summary')}"</p>
         
@@ -109,112 +109,102 @@ def generate_suite(topic: str, notebook_path: str = "decorator_mastery_test.ipyn
     """
     display(HTML(blueprint_html))
 
-    # 2. Build the complete notebook with individual cells
-    nb = nbf.v4.new_notebook()
-    nb.metadata["kernelspec"] = {
-        "display_name": "Python 3",
-        "language": "python",
-        "name": "python3"
-    }
-    nb.metadata["language_info"] = {
-        "name": "python",
-        "version": "3.14.0"
-    }
-
-    cells = []
-
-    # Title Markdown Cell
-    cells.append(nbf.v4.new_markdown_cell(f"""# 🚀 Assessment Suite: {topic}
-### Dynamic 10-Question Progressive Mastery Test
-
-Write your JavaScript code in each question's answer cell, then run the evaluation cell beneath it for instant background feedback and test validation.
-"""))
-
-    # Topic Generator Control Cell
-    topic_control_code = f"""# === TOPIC GENERATOR CELL ===
-# Change the topic below and re-run this cell whenever you want to test a new topic!
-from notebook_engine import generate_suite, evaluate, show_scoreboard
-
-TOPIC = \"\"\"{topic}\"\"\"
-
-# Generate dynamic notebook cells for this topic:
-generate_suite(TOPIC)
-"""
-    cells.append(nbf.v4.new_code_cell(topic_control_code))
-
-    # 10 Questions: Markdown Cell + Answer Code Cell + Evaluation Code Cell
-    for q in questions:
-        qid = q["id"]
-        title = q["title"]
-        diff = q.get("difficulty", "General")
-        concepts_str = " • ".join(q.get("concepts", []))
-
-        # Hints
-        hints_html = ""
-        for h in q.get("hints", []):
-            hints_html += f"""
-<details style="margin: 6px 0; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; cursor: pointer;">
-  <summary style="font-weight: 600; color: #2563EB;">💡 Hint {h.get('tier', 1)}: {h.get('title', 'Hint')}</summary>
-  <div style="margin-top: 8px; color: #334155; font-size: 13px;">
-{h.get('content', '')}
-  </div>
-</details>"""
-
-        q_md = f"""---
-## Question {qid}: {title}
-**Difficulty:** `{diff}` | **Core Concepts:** `{concepts_str}`
-
-{q.get('description', '')}
-
-### 🔍 Progressive Hints
-{hints_html}
-"""
-        cells.append(nbf.v4.new_markdown_cell(q_md))
-
-        # Student Answer Code Cell
-        starter = q.get("starter_code", "// Write your JavaScript code here")
-        answer_code = f"""# === QUESTION {qid} ANSWER CELL ===
-# Write your JavaScript solution below:
-q{qid}_solution = \"\"\"{starter}\"\"\"
-"""
-        cells.append(nbf.v4.new_code_cell(answer_code))
-
-        # Background Evaluation Code Cell
-        eval_cell_code = f"""# === QUESTION {qid} EVALUATION CELL ===
-# Run this cell to check your solution for Question {qid}:
-evaluate({qid}, q{qid}_solution)
-"""
-        cells.append(nbf.v4.new_code_cell(eval_cell_code))
-
-    # Master Scoreboard Cell
-    scoreboard_md = """---
-## 🏆 Overall Mastery Scoreboard
-Run the cell below to see your aggregate performance and rank across all 10 questions.
-"""
-    cells.append(nbf.v4.new_markdown_cell(scoreboard_md))
-
-    scoreboard_code = """# === FINAL MASTERY SCOREBOARD CELL ===
-show_scoreboard()
-"""
-    cells.append(nbf.v4.new_code_cell(scoreboard_code))
-
-    nb["cells"] = cells
-
-    # Write out to notebook file
-    with open(notebook_path, "w", encoding="utf-8") as f:
-        nbf.write(nb, f)
-
     display(HTML(f"""
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 14px 18px; background: #ECFDF5; border: 1px solid #A7F3D0; border-left: 5px solid #10B981; border-radius: 8px; color: #065F46; margin: 15px 0;">
-        <h4 style="margin:0 0 6px 0; color:#047857;">✅ 10 Dynamic Question & Answer Cells Generated!</h4>
+        <h4 style="margin:0 0 6px 0; color:#047857;">✅ Assessment Suite Active for: {topic}</h4>
         <p style="margin:0; font-size:14px;">
-            The notebook file (<code>{notebook_path}</code>) has been updated with individual question markdown cells, answer code cells (<code>q1_solution</code> ... <code>q10_solution</code>), and one-line evaluation cells (<code>evaluate(1, q1_solution)</code>).
-        </p>
-        <p style="margin:6px 0 0 0; font-size:13px; color:#047857;">
-            <em>Tip: If your notebook editor prompts you to reload or keep external changes, select <strong>Reload / Revert to File</strong> to view the newly generated cells.</em>
+            10 questions loaded! Run the Question 1 cell below (or <code>show(1)</code>) to view instructions and begin solving.
         </p>
     </div>
     """))
+
+
+def generate_suite(topic: str, *args, **kwargs):
+    """Alias for set_topic for seamless backward compatibility."""
+    return set_topic(topic)
+
+
+def show(question_id: int):
+    """
+    Renders the question prompt, difficulty, core concepts, problem statement,
+    and progressive collapsible hint accordions in rich HTML.
+    """
+    suite_data = _load_suite()
+    questions = suite_data.get("questions", ALL_QUESTIONS)
+    
+    q_obj = None
+    for q in questions:
+        if q["id"] == question_id:
+            q_obj = q
+            break
+
+    if not q_obj:
+        print(f"❌ Question {question_id} not found in current suite.")
+        return
+
+    diff = q_obj.get("difficulty", "Fundamental")
+    diff_colors = {
+        "Fundamental": "#10B981",
+        "Intermediate": "#3B82F6",
+        "Advanced": "#F59E0B",
+        "Expert": "#EF4444"
+    }
+    diff_color = diff_colors.get(diff, "#6B7280")
+    
+    concepts = q_obj.get("concepts", [])
+    concept_pills = "".join([
+        f"<span style='background:rgba(59,130,246,0.1); color:#2563EB; font-size:11px; font-weight:600; padding:2px 8px; border-radius:12px; margin-right:6px;'>{c}</span>"
+        for c in concepts
+    ])
+
+    hints_html = ""
+    for h in q_obj.get("hints", []):
+        hints_html += f"""
+        <details style="margin: 6px 0; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; cursor: pointer;">
+          <summary style="font-weight: 600; color: #2563EB; font-size: 13px;">💡 Hint {h.get('tier', 1)}: {h.get('title', 'Hint')}</summary>
+          <div style="margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.5;">
+            {h.get('content', '').replace(chr(10), '<br/>')}
+          </div>
+        </details>
+        """
+
+    # Format description markdown as readable HTML
+    desc = q_obj.get("description", "").strip()
+    # Simple markdown cleaner for display
+    desc_html = desc.replace("\n", "<br/>")
+
+    html = f"""
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: white; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; margin: 12px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; border-bottom: 1px solid #F1F5F9; padding-bottom: 10px;">
+            <div>
+                <span style="font-size:12px; font-weight:bold; color:#64748B; text-transform:uppercase; letter-spacing:0.5px;">Question {question_id} of {len(questions)}</span>
+                <h3 style="margin:4px 0 0 0; color:#0F172A; font-size:18px;">{q_obj.get('title')}</h3>
+            </div>
+            <span style="background:{diff_color}; color:white; font-size:12px; font-weight:bold; padding:4px 12px; border-radius:12px;">
+                {diff}
+            </span>
+        </div>
+        
+        <div style="margin-bottom: 14px;">
+            {concept_pills}
+        </div>
+        
+        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; padding:14px; color:#1E293B; font-size:14px; line-height:1.6; margin-bottom:14px;">
+            {desc_html}
+        </div>
+        
+        <div style="margin-bottom: 8px;">
+            <strong style="color:#0F172A; font-size:13px;">🔍 Progressive Hints (Click to expand if needed):</strong>
+            {hints_html}
+        </div>
+    </div>
+    """
+    display(HTML(html))
+
+
+# Aliases
+show_question = show
+q = show
 
 
 def evaluate(question_id: int, student_code: str):
