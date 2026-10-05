@@ -153,11 +153,60 @@ class AIEvaluator:
         except Exception:
             return None
 
+    def analyze_topic(self, topic_input: str) -> Dict[str, Any]:
+
+        """
+        Analyzes the topics entered by the student at the beginning of the notebook.
+        Generates core learning pillars, pitfalls, and diagnostic checklist.
+        """
+        system_prompt = (
+            "You are a master JavaScript instructor. "
+            "Analyze the user's input topic(s) and provide a structured JSON curriculum diagnosis. "
+            "Return ONLY a JSON object, no conversational filler."
+        )
+        user_prompt = f"""
+TOPIC(S) ENTERED BY USER:
+{topic_input}
+
+Return JSON with this schema:
+{{
+  "topic_summary": "Brief 1-sentence synthesis of the subject matter",
+  "key_mental_models": ["Core concept 1", "Core concept 2", "Core concept 3"],
+  "common_pitfalls": ["Pitfall 1", "Pitfall 2"],
+  "mastery_checklist": ["What you must master 1", "What you must master 2"],
+  "recommended_focus": "Advice for tackling the 10 diagnostic test questions"
+}}
+"""
+        response_text = self.chat_complete(system_prompt, user_prompt, max_tokens=1500)
+        parsed = self.parse_json_response(response_text)
+        if not parsed or not isinstance(parsed, dict) or "topic_summary" not in parsed:
+            parsed = {
+                "topic_summary": f"In-depth curriculum analysis for: {topic_input or 'JavaScript Mastery'}",
+                "key_mental_models": [
+                    f"Core Execution Mechanics of {topic_input}",
+                    "State & Argument Flow Preservation",
+                    "Higher-Order Abstraction & Boundary Conditions"
+                ],
+                "common_pitfalls": [
+                    "Losing execution context or parameters across asynchronous boundaries",
+                    "Shadowing variables and mutation of shared references",
+                    "Failing to handle edge-case inputs and error states"
+                ],
+                "mastery_checklist": [
+                    "Master fundamental implementation and syntax patterns",
+                    "Handle timer, async queues, and lifecycle hooks correctly",
+                    "Implement composition, factories, and debugging diagnostics"
+                ],
+                "recommended_focus": "Focus on pure transformations, context forwarding, and edge-case validation."
+            }
+        return parsed
+
     def generate_questions_for_topic(self, topic: str) -> List[Dict[str, Any]]:
         """
         Dynamically generates 10 progressive difficulty questions strictly tailored to the topic
         following the 10-tier blueprint in plan.md.
         """
+
         system_prompt = (
             "You are a principal software engineering instructor. "
             "Generate an interactive 10-question progressive mastery test suite tailored specifically to the given topic. "
