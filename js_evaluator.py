@@ -1,6 +1,8 @@
 """
 JSEvaluator: Node.js subprocess execution engine for JavaScript testing.
 Runs user code alongside deterministic test suites and returns structured execution results.
+Uses Node.js vm module for sandboxed execution to prevent RCE.
+Reads code from temp files to avoid escaping issues with template literals.
 """
 
 import json
@@ -17,85 +19,129 @@ class JSEvaluator:
 
     def evaluate(self, student_code: str, test_suite_code: str) -> Dict[str, Any]:
         """
-        Executes student code together with a test harness in Node.js.
+        Executes student code together with a test harness in Node.js vm sandbox.
         Returns a dictionary with status, passed tests, failed tests, logs, and errors.
         """
-        # Wrap everything in a sandbox harness that catches unhandled errors and emits JSON results
-        harness = f"""
-// === STUDENT CODE START ===
-{student_code}
-// === STUDENT CODE END ===
+        student_file = None
+        test_file = None
+        harness_file = None
+        
+        harness_code = """
+const vm = require('vm');
+const fs = require('fs');
 
-// === TEST HARNESS START ===
-(async () => {{
-    const __results = {{
-        total: 0,
-        passed: 0,
-        failed: 0,
-        tests: [],
-        logs: [],
-        error: null
-    }};
+const __results = {
+    total: 0,
+    passed: 0,
+    failed: 0,
+    tests: [],
+    logs: [],
+    error: null
+};
 
-    const originalLog = console.log;
-    const originalError = console.error;
-    console.log = (...args) => {{
+const sandboxConsole = {
+    log: (...args) => {
         __results.logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '));
-    }};
-    console.error = (...args) => {{
+    },
+    error: (...args) => {
         __results.logs.push('[STDERR] ' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '));
-    }};
+    }
+};
 
-    async function test(name, fn) {{
-        __results.total++;
-        try {{
-            await fn();
-            __results.passed++;
-            __results.tests.push({{ name, passed: true, error: null }});
-        }} catch (err) {{
-            __results.failed++;
-            __results.tests.push({{ name, passed: false, error: err.message || String(err) }});
-        }}
-    }}
+async function test(name, fn) {
+    __results.total++;
+    try {
+        await fn();
+        __results.passed++;
+        __results.tests.push({ name, passed: true, error: null });
+    } catch (err) {
+        __results.failed++;
+        __results.tests.push({ name, passed: false, error: err.message || String(err) });
+    }
+}
 
-    function assert(condition, message) {{
-        if (!condition) throw new Error(message || 'Assertion failed');
-    }}
+function assert(condition, message) {
+    if (!condition) throw new Error(message || 'Assertion failed');
+}
 
-    function assertEqual(actual, expected, message) {{
-        const actStr = JSON.stringify(actual);
-        const expStr = JSON.stringify(expected);
-        if (actStr !== expStr) {{
-            throw new Error((message ? message + ': ' : '') + `Expected ${{expStr}}, but got ${{actStr}}`);
-        }}
-    }}
+function assertEqual(actual, expected, message) {
+    const actStr = JSON.stringify(actual);
+    const expStr = JSON.stringify(expected);
+    if (actStr !== expStr) {
+        throw new Error((message ? message + ': ' : '') + `Expected ${expStr}, but got ${actStr}`);
+    }
+}
 
-    try {{
-        {test_suite_code}
-    }} catch (harnessErr) {{
-        __results.error = harnessErr.stack || harnessErr.message || String(harnessErr);
-    }}
+const sandbox = {
+    console: sandboxConsole,
+    test,
+    assert,
+    assertEqual,
+    setTimeout,
+    clearTimeout,
+    setInterval,
+    clearInterval,
+    Promise,
+    Object,
+    Array,
+    String,
+    Number,
+    Boolean,
+    Date,
+    RegExp,
+    Map,
+    Set,
+    JSON,
+    Math,
+    Error,
+    TypeError,
+    ReferenceError,
+    SyntaxError,
+    RangeError,
+    globalThis: undefined
+};
 
-    process.stdout.write('__JSON_START__' + JSON.stringify(__results) + '__JSON_END__');
-}})().catch(err => {{
-    process.stdout.write('__JSON_START__' + JSON.stringify({{
-        total: 0,
-        passed: 0,
-        failed: 1,
-        tests: [{{ name: 'Global Execution', passed: false, error: err.message || String(err) }}],
-        logs: [],
-        error: err.stack || err.message || String(err)
-    }}) + '__JSON_END__');
-}});
+// Read student code from file
+const studentCode = fs.readFileSync(process.argv[2], 'utf-8');
+const testSuiteCode = fs.readFileSync(process.argv[3], 'utf-8');
+
+// Run student code in sandbox
+const studentScript = new vm.Script(studentCode, { filename: 'student_code.cjs' });
+const studentContext = vm.createContext(sandbox);
+studentScript.runInContext(studentContext);
+
+// Run test suite in same sandbox (so tests can access student functions) inside async IIFE
+const testSuiteWrapped = `(async () => {
+    ${testSuiteCode}
+})();`;
+const testScript = new vm.Script(testSuiteWrapped, { filename: 'test_suite.cjs' });
+try {
+    testScript.runInContext(studentContext);
+} catch (harnessErr) {
+    __results.error = harnessErr.stack || harnessErr.message || String(harnessErr);
+}
+
+process.stdout.write('__JSON_START__' + JSON.stringify(__results) + '__JSON_END__');
 """
-        temp_file = None
+        
         try:
+            # Write student code to temp file
             with tempfile.NamedTemporaryFile(mode='w', suffix='.cjs', delete=False, encoding='utf-8') as f:
-                f.write(harness)
-                temp_file = f.name
+                f.write(student_code)
+                student_file = f.name
+            
+            # Write test suite code to temp file
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.cjs', delete=False, encoding='utf-8') as f:
+                f.write(test_suite_code)
+                test_file = f.name
+            
+            # Write harness to temp file
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.cjs', delete=False, encoding='utf-8') as f:
+                f.write(harness_code)
+                harness_file = f.name
 
             proc = subprocess.run(
-                [self.node_path, temp_file],
+                [self.node_path, harness_file, student_file, test_file],
                 capture_output=True,
                 text=True,
                 timeout=self.timeout_seconds,
@@ -147,11 +193,12 @@ class JSEvaluator:
                 "raw_stderr": ""
             }
         finally:
-            if temp_file and os.path.exists(temp_file):
-                try:
-                    os.remove(temp_file)
-                except Exception:
-                    pass
+            for temp_file in (student_file, test_file, harness_file):
+                if temp_file and os.path.exists(temp_file):
+                    try:
+                        os.remove(temp_file)
+                    except Exception:
+                        pass
 
 
 if __name__ == "__main__":
