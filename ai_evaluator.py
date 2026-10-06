@@ -318,16 +318,6 @@ Return JSON with this schema:
         Dynamically generates 10 progressive difficulty questions strictly tailored to the topic
         following the 10-tier blueprint in plan.md.
         """
-        topic_lower = (topic or "").lower()
-
-        # Check curated topics for instant, deterministic, zero-latency high quality
-        if any(k in topic_lower for k in ["bind", "partial", "lost this", "context", "curry"]):
-            from topic_curriculum import BINDING_AND_PARTIALS_QUESTIONS
-            return BINDING_AND_PARTIALS_QUESTIONS
-        elif any(k in topic_lower for k in ["decorator", "caching", "spy", "borrowing"]):
-            from questions import ALL_QUESTIONS
-            return ALL_QUESTIONS
-
         system_prompt = (
             "You are a principal software engineering instructor. "
             "Generate an interactive 10-question progressive mastery test suite tailored specifically to the given topic. "
