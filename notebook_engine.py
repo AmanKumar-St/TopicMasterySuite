@@ -16,8 +16,32 @@ from questions import ALL_QUESTIONS
 SUITE_STATE_FILE = "current_suite.json"
 PROGRESS_STATE_FILE = "session_progress.json"
 
-js_evaluator = JSEvaluator()
-ai_evaluator = AIEvaluator()
+# Module-level evaluator instances (lazily initialized to avoid shared state issues)
+_js_evaluator = None
+_ai_evaluator = None
+
+
+def get_js_evaluator() -> JSEvaluator:
+    """Get or create a JSEvaluator instance. Creates new instance per call to avoid shared state."""
+    global _js_evaluator
+    if _js_evaluator is None:
+        _js_evaluator = JSEvaluator()
+    return _js_evaluator
+
+
+def get_ai_evaluator() -> AIEvaluator:
+    """Get or create an AIEvaluator instance. Creates new instance per call to avoid shared state."""
+    global _ai_evaluator
+    if _ai_evaluator is None:
+        _ai_evaluator = AIEvaluator()
+    return _ai_evaluator
+
+
+def reset_evaluators():
+    """Reset evaluator instances (useful for testing or session isolation)."""
+    global _js_evaluator, _ai_evaluator
+    _js_evaluator = None
+    _ai_evaluator = None
 
 
 def _save_suite(questions: list, topic_analysis: dict, topic: str):
@@ -74,8 +98,8 @@ def set_topic(topic: str):
     </div>
     """))
 
-    topic_analysis = ai_evaluator.analyze_topic(topic)
-    questions = ai_evaluator.generate_questions_for_topic(topic)
+    topic_analysis = get_ai_evaluator().analyze_topic(topic)
+    questions = get_ai_evaluator().generate_questions_for_topic(topic)
     _save_suite(questions, topic_analysis, topic)
 
     # Render Topic Analysis Blueprint in the output
@@ -233,10 +257,10 @@ def evaluate(question_id: int, student_code: str):
     attempts = progress[qid_key]["attempts"]
 
     # Background execution in Node.js
-    test_results = js_evaluator.evaluate(student_code, q_obj.get("test_suite_js", ""))
+    test_results = get_js_evaluator().evaluate(student_code, q_obj.get("test_suite_js", ""))
 
     # Background AI grading
-    eval_result = ai_evaluator.evaluate_question(
+    eval_result = get_ai_evaluator().evaluate_question(
         question_id=question_id,
         question_title=q_obj.get("title", f"Question {question_id}"),
         question_desc=q_obj.get("description", ""),
