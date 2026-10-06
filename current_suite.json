@@ -1,355 +1,345 @@
 {
   "topic": "django , views , urls , slugs , named views , reversefunction.",
   "topic_analysis": {
-    "topic_summary": "Django URL routing and reversing: mapping URL patterns to views, using slugs and named URL patterns, and generating URLs with reverse().",
+    "topic_summary": "In-depth curriculum analysis for: django , views , urls , slugs , named views , reversefunction.",
     "key_mental_models": [
-      "URL patterns are declarative mappings between URL strings and view callables",
-      "Named URL patterns create stable identifiers that decouple URL structure from code",
-      "Slugs are human-readable URL segments that identify objects without exposing database IDs",
-      "reverse() resolves a named URL pattern to a concrete URL string at runtime"
+      "Core Execution Mechanics of django , views , urls , slugs , named views , reversefunction.",
+      "State & Argument Flow Preservation",
+      "Higher-Order Abstraction & Boundary Conditions"
     ],
     "common_pitfalls": [
-      "Hardcoding URLs instead of using reverse() or named patterns",
-      "Using ambiguous or missing url_name arguments in reverse()",
-      "Confusing URL path parameters with view kwargs or query parameters",
-      "Assuming slugs are unique globally without enforcing uniqueness or handling collisions"
+      "Losing execution context or parameters across asynchronous boundaries",
+      "Shadowing variables and mutation of shared references",
+      "Failing to handle edge-case inputs and error states"
     ],
     "mastery_checklist": [
-      "Explain how Django matches a request URL to a view via urls.py and path/re_path patterns",
-      "Write URL patterns with named routes and capture path parameters like <slug:slug>",
-      "Use reverse() and reverse_lazy() to build URLs in views, templates, and model methods",
-      "Design slug-based URLs with uniqueness, readability, and fallback/error handling"
+      "Master fundamental implementation and syntax patterns",
+      "Handle timer, async queues, and lifecycle hooks correctly",
+      "Implement composition, factories, and debugging diagnostics"
     ],
-    "recommended_focus": "For the 10 diagnostic questions, focus on tracing a request from URL pattern to view, identifying named patterns and path converters, and predicting the output of reverse() with kwargs; practice writing urls.py and using reverse() in templates and views."
+    "recommended_focus": "Focus on pure transformations, context forwarding, and edge-case validation."
   },
   "questions": [
     {
       "id": 1,
-      "title": "Fixing Lost 'this' in Callbacks",
+      "title": "Fundamental Mechanics: django Parser & Formatter",
       "difficulty": "Fundamental",
       "concepts": [
-        "Call site context",
-        "Lost this",
-        "Closure wrapper",
-        "func.apply()"
+        "django core syntax",
+        "Input normalization",
+        "Data parsing"
       ],
-      "description": "\n### Problem Statement\nWhen an object method is passed as a callback (e.g., to `setTimeout` or an array method), its `this` reference to the original object is lost.\n\nWrite a utility function `bindMethod(obj, methodName)` that returns a wrapper function permanently bound to `obj`.\n\n#### Requirements:\n1. `bindMethod(obj, methodName)` should retrieve `obj[methodName]` and return a function.\n2. When the returned function is called, it must execute `obj[methodName]` with `this` strictly pointing to `obj`.\n3. Any arguments passed to the returned function must be forwarded to the original method.\n4. The return value of the method must be returned by the wrapper.\n",
-      "starter_code": "function bindMethod(obj, methodName) {\n  // TODO: Return a function that calls obj[methodName] with obj as this\n  return function(...args) {\n\n  };\n}",
+      "description": "\n### Problem Statement\nBuild the core processor for **django , views , urls , slugs , named views , reversefunction.**.\n\nWrite a function `processdjango(input, options = {})` that normalizes the input data, extracts relevant `django` attributes, and returns a structured payload.\n\n#### Requirements:\n1. If `input` is a string, trim whitespace and return `{ value: input.trim(), topic: 'django', processed: true }`.\n2. If `options.tag` is provided, include `tag: options.tag` in the returned object.\n3. If `input` is null or undefined, throw a `TypeError('Invalid input for django')`.\n",
+      "starter_code": "function processdjango(input, options = {}) {\n  // TODO: Validate input and return structured django data\n  \n}",
       "hints": [
         {
           "tier": 1,
           "title": "Conceptual Nudge",
-          "content": "Passing `user.sayHi` as a standalone reference detaches it from `user`. You need `obj[methodName].apply(obj, args)` or `obj[methodName].call(obj, ...args)`."
+          "content": "Check for null/undefined first before attempting to process `django`."
         },
         {
           "tier": 2,
           "title": "Approach Strategy",
-          "content": "Return a wrapper function `(...args) => obj[methodName].call(obj, ...args)` or use `function(...args) { return obj[methodName].apply(obj, args); }`."
+          "content": "Throw TypeError for null/undefined. Return an object with value, topic, processed, and optional tag."
         },
         {
           "tier": 3,
           "title": "Code Skeleton",
-          "content": "```javascript\nfunction bindMethod(obj, methodName) {\n  return function(...args) {\n    return obj[methodName].apply(obj, args);\n  };\n}\n```"
+          "content": "```javascript\nfunction processdjango(input, options = {}) {\n  if (input === null || input === undefined) throw new TypeError('Invalid input for django');\n  const res = { value: String(input).trim(), topic: 'django', processed: true };\n  if (options.tag) res.tag = options.tag;\n  return res;\n}\n```"
         }
       ],
-      "test_suite_js": "\nawait test('Preserves object context when called detached', () => {\n    const user = {\n        name: 'Alex',\n        greet(greeting) {\n            return `${greeting}, I am ${this.name}!`;\n        }\n    };\n    const boundGreet = bindMethod(user, 'greet');\n    \n    // Simulate passing as callback\n    function runner(cb) {\n        return cb('Hello');\n    }\n    assertEqual(runner(boundGreet), 'Hello, I am Alex!');\n});\n\nawait test('Forwards multiple arguments correctly', () => {\n    const calc = {\n        multiplier: 3,\n        compute(a, b) {\n            return (a + b) * this.multiplier;\n        }\n    };\n    const boundCompute = bindMethod(calc, 'compute');\n    assertEqual(boundCompute(4, 6), 30);\n});\n",
-      "solution_code": "function bindMethod(obj, methodName) {\n  return function(...args) {\n    return obj[methodName].apply(obj, args);\n  };\n}",
-      "explanation": "Extracting a method creates a bare function reference. Using `.apply(obj, args)` explicitly restores `this` to `obj` at invocation time."
+      "test_suite_js": "\nawait test('Processes string input with topic metadata', () => {\n    const res = processdjango('  sample data  ');\n    assertEqual(res.value, 'sample data');\n    assertEqual(res.topic, 'django');\n    assertEqual(res.processed, true);\n});\n\nawait test('Applies optional tag option', () => {\n    const res = processdjango('test', { tag: 'alpha' });\n    assertEqual(res.tag, 'alpha');\n});\n\nawait test('Throws TypeError on null/undefined', () => {\n    let threw = false;\n    try {\n        processdjango(null);\n    } catch (e) {\n        threw = (e instanceof TypeError);\n    }\n    assert(threw, 'Should throw TypeError for null input');\n});\n",
+      "solution_code": "function processdjango(input, options = {}) {\n  if (input === null || input === undefined) {\n    throw new TypeError('Invalid input for django');\n  }\n  const res = {\n    value: String(input).trim(),\n    topic: 'django',\n    processed: true\n  };\n  if (options.tag) {\n    res.tag = options.tag;\n  }\n  return res;\n}",
+      "explanation": "Core entry-point handler for django , views , urls , slugs , named views , reversefunction., validating input boundaries and structuring normalized metadata."
     },
     {
       "id": 2,
-      "title": "Custom Function.prototype.bind Implementation",
+      "title": "State Tracking: django Activity Recorder",
       "difficulty": "Fundamental",
       "concepts": [
-        "myBind",
-        "Bound arguments",
-        "Context locking",
-        "func.apply"
+        "Closure encapsulation",
+        "State logging",
+        "Audit history"
       ],
-      "description": "\n### Problem Statement\nImplement a custom version of `Function.prototype.bind` named `myBind(fn, context, ...boundArgs)`.\n\n#### Requirements:\n1. `myBind` takes a target function `fn`, a `context` to lock `this` to, and optional initial arguments (`...boundArgs`).\n2. It returns a new function.\n3. When the returned function is called with `...runtimeArgs`, it executes `fn` with `this` set to `context`, receiving combined arguments: `[...boundArgs, ...runtimeArgs]`.\n4. Returns the result of `fn`.\n*(Note: Do not use the built-in `.bind()` in your solution)*\n",
-      "starter_code": "function myBind(fn, context, ...boundArgs) {\n  // TODO: Implement custom bind with partial argument application\n  \n}",
+      "description": "\n### Problem Statement\nCreate a recorder `createdjangoTracker()` to log and inspect all operations performed within the **django , views , urls , slugs , named views , reversefunction.** domain.\n\n#### Requirements:\n1. Returns an object with methods:\n   - `record(action, payload)`: Appends an entry `{ action, payload, timestamp: Date.now() }` to internal history and returns total entries count.\n   - `getHistory(actionFilter)`: Returns a shallow copy array of recorded entries (filtered by `action` if `actionFilter` is supplied).\n   - `clear()`: Resets history and returns `0`.\n",
+      "starter_code": "function createdjangoTracker() {\n  // TODO: Encapsulate private history and expose record, getHistory, clear\n  \n}",
       "hints": [
         {
           "tier": 1,
           "title": "Conceptual Nudge",
-          "content": "Combine `boundArgs` passed at bind-time with `runtimeArgs` passed at call-time."
+          "content": "Keep an array in the closure scope."
         },
         {
           "tier": 2,
           "title": "Approach Strategy",
-          "content": "Return `function(...runtimeArgs) { return fn.apply(context, [...boundArgs, ...runtimeArgs]); }`."
+          "content": "Use `filter` when `actionFilter` is provided, otherwise `slice()` for copy."
         },
         {
           "tier": 3,
           "title": "Code Skeleton",
-          "content": "```javascript\nfunction myBind(fn, context, ...boundArgs) {\n  return function(...runtimeArgs) {\n    return fn.apply(context, boundArgs.concat(runtimeArgs));\n  };\n}\n```"
+          "content": "```javascript\nfunction createdjangoTracker() {\n  let history = [];\n  return {\n    record(action, payload) {\n      history.push({ action, payload, timestamp: Date.now() });\n      return history.length;\n    },\n    getHistory(filter) {\n      return filter ? history.filter(h => h.action === filter) : [...history];\n    },\n    clear() {\n      history = [];\n      return 0;\n    }\n  };\n}\n```"
         }
       ],
-      "test_suite_js": "\nawait test('Binds context and prepends arguments', () => {\n    function greet(greeting, punctuation, name) {\n        return `${greeting}, ${name}${punctuation} (${this.role})`;\n    }\n    const ctx = { role: 'Admin' };\n    const bound = myBind(greet, ctx, 'Welcome', '!');\n    assertEqual(bound('Sarah'), 'Welcome, Sarah! (Admin)');\n});\n\nawait test('Works without initial bound arguments', () => {\n    const person = { name: 'Elena' };\n    function getName() {\n        return this.name;\n    }\n    const bound = myBind(getName, person);\n    assertEqual(bound(), 'Elena');\n});\n",
-      "solution_code": "function myBind(fn, context, ...boundArgs) {\n  return function(...runtimeArgs) {\n    return fn.apply(context, [...boundArgs, ...runtimeArgs]);\n  };\n}",
-      "explanation": "A bound function combines a fixed `this` reference with partially applied arguments at definition time, concatenating call-time arguments before invoking `.apply()`."
+      "test_suite_js": "\nawait test('Records actions and returns count', () => {\n    const tracker = createdjangoTracker();\n    assertEqual(tracker.record('init', { id: 1 }), 1);\n    assertEqual(tracker.record('update', { id: 1, val: 'ok' }), 2);\n    assertEqual(tracker.getHistory().length, 2);\n});\n\nawait test('Filters history by action name', () => {\n    const tracker = createdjangoTracker();\n    tracker.record('read', { key: 'a' });\n    tracker.record('write', { key: 'b' });\n    tracker.record('read', { key: 'c' });\n    assertEqual(tracker.getHistory('read').length, 2);\n    assertEqual(tracker.getHistory('write').length, 1);\n});\n",
+      "solution_code": "function createdjangoTracker() {\n  let history = [];\n  return {\n    record(action, payload) {\n      history.push({ action, payload, timestamp: Date.now() });\n      return history.length;\n    },\n    getHistory(filter) {\n      return filter ? history.filter(h => h.action === filter) : [...history];\n    },\n    clear() {\n      history = [];\n      return 0;\n    }\n  };\n}",
+      "explanation": "Demonstrates closure-based state encapsulation for domain activity monitoring."
     },
     {
       "id": 3,
-      "title": "Partial Application with Preserved Context",
+      "title": "Validation & Schema: django Guard",
       "difficulty": "Intermediate",
       "concepts": [
-        "Partial application",
-        "Call-site context",
-        "Argument fixing",
-        "func.call(this)"
+        "Schema validation",
+        "Type checking",
+        "Error accumulation"
       ],
-      "description": "\n### Problem Statement\nCreate a `partial(fn, ...fixedArgs)` helper for partial function application.\n\nUnlike `bind()`, which fixes both arguments AND the `this` context, a true general `partial` helper should **ONLY fix arguments** while **preserving whatever `this` context is present at the call site**.\n\n#### Requirements:\n1. `partial(fn, ...fixedArgs)` returns a function.\n2. When the returned function is called (e.g. as a method on an object `obj.method(...)`), `this` inside `fn` MUST be the runtime `this` of the caller.\n3. Arguments passed must be `[...fixedArgs, ...runtimeArgs]`.\n",
-      "starter_code": "function partial(fn, ...fixedArgs) {\n  // TODO: Fix arguments while preserving the runtime `this` from the call site\n  \n}",
+      "description": "\n### Problem Statement\nImplement a schema validator `validatedjangoSchema(target, schema)` to verify that entities in **django , views , urls , slugs , named views , reversefunction.** conform to required invariants.\n\n#### Requirements:\n1. `schema` is an object where keys are expected property names and values are type strings (`'string'`, `'number'`, `'boolean'`, `'function'`).\n2. If `target` satisfies all types, return `{ valid: true, errors: [] }`.\n3. If any required property is missing or has incorrect `typeof`, return `{ valid: false, errors: ['missing or invalid <prop>'] }`.\n",
+      "starter_code": "function validatedjangoSchema(target, schema) {\n  // TODO: Validate properties of target against schema definition\n  \n}",
       "hints": [
         {
           "tier": 1,
           "title": "Conceptual Nudge",
-          "content": "Do NOT use an arrow function for the returned function if you want dynamic `this`, or make sure to forward `this` explicitly via `.call(this, ...)`."
+          "content": "Iterate over `Object.keys(schema)` and check `typeof target[key] === schema[key]`."
         },
         {
           "tier": 2,
           "title": "Approach Strategy",
-          "content": "Use a standard `function(...runtimeArgs)` and invoke `fn.apply(this, [...fixedArgs, ...runtimeArgs])`."
+          "content": "Handle non-object target early by reporting invalid target."
         },
         {
           "tier": 3,
           "title": "Code Skeleton",
-          "content": "```javascript\nfunction partial(fn, ...fixedArgs) {\n  return function(...runtimeArgs) {\n    return fn.apply(this, [...fixedArgs, ...runtimeArgs]);\n  };\n}\n```"
+          "content": "```javascript\nfunction validate(target, schema) {\n  const errors = [];\n  if (!target || typeof target !== 'object') return { valid: false, errors: ['Target is not an object'] };\n  for (const [k, t] of Object.entries(schema)) {\n    if (typeof target[k] !== t) errors.push(`Invalid field ${k}`);\n  }\n  return { valid: errors.length === 0, errors };\n}\n```"
         }
       ],
-      "test_suite_js": "\nawait test('Preserves caller context on object method call', () => {\n    const user = {\n        name: 'Jordan',\n        say(time, phrase) {\n            return `[${time}] ${this.name}: ${phrase}`;\n        }\n    };\n    // Partially apply '10:00 AM' as time, but keep user as this\n    user.sayMorning = partial(user.say, '10:00 AM');\n    assertEqual(user.sayMorning('Good morning!'), '[10:00 AM] Jordan: Good morning!');\n});\n\nawait test('Works standalone with regular functions', () => {\n    function multiply(a, b, c) {\n        return a * b * c;\n    }\n    const doubleAndScale = partial(multiply, 2);\n    assertEqual(doubleAndScale(3, 4), 24);\n});\n",
-      "solution_code": "function partial(fn, ...fixedArgs) {\n  return function(...runtimeArgs) {\n    return fn.apply(this, [...fixedArgs, ...runtimeArgs]);\n  };\n}",
-      "explanation": "By returning a regular function, `this` is bound at invocation time. Forwarding `this` to `fn.apply(this, ...)` ensures that object methods retain their calling instance."
+      "test_suite_js": "\nawait test('Validates matching schema successfully', () => {\n    const schema = { id: 'number', label: 'string', active: 'boolean' };\n    const entity = { id: 101, label: 'django Unit', active: true };\n    const res = validatedjangoSchema(entity, schema);\n    assertEqual(res.valid, true);\n    assertEqual(res.errors.length, 0);\n});\n\nawait test('Detects missing or mistyped properties', () => {\n    const schema = { count: 'number', name: 'string' };\n    const entity = { count: 'five', name: 'Test' };\n    const res = validatedjangoSchema(entity, schema);\n    assertEqual(res.valid, false);\n    assert(res.errors.length > 0, 'Errors should list type mismatch');\n});\n",
+      "solution_code": "function validatedjangoSchema(target, schema) {\n  const errors = [];\n  if (!target || typeof target !== 'object') {\n    return { valid: false, errors: ['Target must be an object'] };\n  }\n  for (const [key, expectedType] of Object.entries(schema)) {\n    if (typeof target[key] !== expectedType) {\n      errors.push(`Property '${key}' expected type ${expectedType}, got ${typeof target[key]}`);\n    }\n  }\n  return { valid: errors.length === 0, errors };\n}",
+      "explanation": "Validates data contracts and invariants necessary for predictable execution in complex workflows."
     },
     {
       "id": 4,
-      "title": "Going Partial Without Context",
+      "title": "Async Coordination: django Task Queue",
       "difficulty": "Intermediate",
       "concepts": [
-        "Context stripping",
-        "Partial without this",
-        "Explicit undefined context",
-        "Pure partial"
+        "Async/Await",
+        "Promise chaining",
+        "Sequential execution"
       ],
-      "description": "\n### Problem Statement\nSometimes we want to create a partial function that explicitly **drops/ignores** any caller context, always executing `fn` in a pure context-free environment (`this = undefined`).\n\nWrite `partialWithoutContext(fn, ...fixedArgs)`.\n\n#### Requirements:\n1. Fixes `...fixedArgs` at the beginning of the argument list.\n2. Even if the returned function is attached to an object and called as a method (e.g. `obj.calc(...)`), `fn` MUST be invoked with `this` set to `undefined`.\n3. It must return the result of `fn`.\n",
-      "starter_code": "function partialWithoutContext(fn, ...fixedArgs) {\n  // TODO: Fix arguments and explicitly isolate fn from any caller `this`\n  \n}",
+      "description": "\n### Problem Statement\nWrite an async batch runner `rundjangoSequence(tasks, initialValue)` that executes a list of asynchronous tasks sequentially for **django , views , urls , slugs , named views , reversefunction.**.\n\n#### Requirements:\n1. `tasks` is an array of async functions `[task1, task2, ...]`.\n2. Each task receives the output of the previous task (starting with `initialValue`).\n3. Returns a Promise resolving to the final result after all tasks have completed in sequence.\n4. If `tasks` is empty, resolves to `initialValue`.\n",
+      "starter_code": "async function rundjangoSequence(tasks, initialValue) {\n  // TODO: Execute async tasks sequentially passing intermediate values\n  \n}",
       "hints": [
         {
           "tier": 1,
           "title": "Conceptual Nudge",
-          "content": "How do you invoke a function so its `this` is explicitly `undefined` regardless of caller?"
+          "content": "Use a `for...of` loop with `await task(current)`."
         },
         {
           "tier": 2,
           "title": "Approach Strategy",
-          "content": "Inside the returned wrapper, call `fn.apply(undefined, [...fixedArgs, ...runtimeArgs])`."
+          "content": "Initialize `let current = initialValue;` then iterate over tasks awaiting each."
         },
         {
           "tier": 3,
           "title": "Code Skeleton",
-          "content": "```javascript\\nfunction partialWithoutContext(fn, ...fixedArgs) {\\n  return function(...runtimeArgs) {\\n    return fn.apply(undefined, [...fixedArgs, ...runtimeArgs]);\\n  };\\n}\\n```"
+          "content": "```javascript\nasync function runSequence(tasks, initial) {\n  let current = initial;\n  for (const t of tasks) {\n    current = await t(current);\n  }\n  return current;\n}\n```"
         }
       ],
-      "test_suite_js": "\nawait test('Explicitly removes context even when called on object', () => {\n    'use strict';\n    function inspect(a, b) {\n        'use strict';\n        return { context: this, sum: a + b };\n    }\n    const addFive = partialWithoutContext(inspect, 5);\n    \n    const obj = { name: 'Holder', addFive };\n    const res = obj.addFive(10);\n    assertEqual(res.sum, 15);\n    assert(res.context === undefined, 'Context should be undefined');\n});\n",
-      "solution_code": "function partialWithoutContext(fn, ...fixedArgs) {\n  return function(...runtimeArgs) {\n    return fn.apply(undefined, [...fixedArgs, ...runtimeArgs]);\n  };\n}",
-      "explanation": "Passing `undefined` as the `thisArg` to `.apply()` ensures the target function cannot access or mutate the caller's object properties."
+      "test_suite_js": "\nawait test('Executes async pipeline in sequential order', async () => {\n    const step1 = async (x) => x + 10;\n    const step2 = async (x) => new Promise(r => setTimeout(() => r(x * 2), 10));\n    const step3 = async (x) => `[django: ${x}]`;\n    \n    const result = await rundjangoSequence([step1, step2, step3], 5);\n    // (5 + 10) * 2 = 30 -> '[django: 30]'\n    assertEqual(result, '[django: 30]');\n});\n\nawait test('Handles empty task list', async () => {\n    const result = await rundjangoSequence([], 'unchanged');\n    assertEqual(result, 'unchanged');\n});\n",
+      "solution_code": "async function rundjangoSequence(tasks, initialValue) {\n  let current = initialValue;\n  for (const task of tasks) {\n    current = await task(current);\n  }\n  return current;\n}",
+      "explanation": "Guarantees ordered asynchronous lifecycle progression without race conditions."
     },
     {
       "id": 5,
-      "title": "Dynamic Auto-Currying with Context Support",
+      "title": "Transformation Pipeline: Compose Django Views Urls",
       "difficulty": "Intermediate",
       "concepts": [
-        "Currying",
-        "Arity tracking",
-        "Recursive partials",
-        "fn.length"
+        "Function composition",
+        "Pure transformations",
+        "Pipeline flow"
       ],
-      "description": "\n### Problem Statement\nWrite a currying utility `curry(fn, arity)` that converts a function of N arguments into a chain of callable functions.\n\n#### Requirements:\n1. If `arity` is omitted, default to `fn.length`.\n2. When called with fewer arguments than `arity`, return a new curried function waiting for the remaining arguments.\n3. When enough arguments are collected, execute `fn` preserving any instance `this` context from the call site.\n4. Support both single-arg chaining `curried(1)(2)(3)` and multi-arg calls `curried(1, 2)(3)`.\n",
-      "starter_code": "function curry(fn, arity = fn.length) {\n  // TODO: Return a curried version of fn supporting both partial and final execution\n  \n}",
+      "description": "\n### Problem Statement\nWrite a pipeline composer `composedjangoPipeline(...transformers)` that combines multiple transformation functions into a single pipeline.\n\n#### Requirements:\n1. Returns a function `(input) => ...`\n2. Passes `input` through each transformer from left to right.\n3. If no transformers are supplied, returns the input as-is.\n",
+      "starter_code": "function composedjangoPipeline(...transformers) {\n  // TODO: Return a single composable pipeline function\n  \n}",
       "hints": [
         {
           "tier": 1,
           "title": "Conceptual Nudge",
-          "content": "Accumulate arguments in a closure. Compare `args.length >= arity`."
+          "content": "Use `reduce` across the `transformers` array."
         },
         {
           "tier": 2,
           "title": "Approach Strategy",
-          "content": "If `args.length >= arity`, invoke `fn.apply(this, args)`. Otherwise, return a function that accepts `...nextArgs` and recurses."
+          "content": "Return `(input) => transformers.reduce((acc, fn) => fn(acc), input)`."
         },
         {
           "tier": 3,
           "title": "Code Skeleton",
-          "content": "```javascript\\nfunction curry(fn, arity = fn.length) {\\n  return function curried(...args) {\\n    if (args.length >= arity) return fn.apply(this, args);\\n    const savedThis = this;\\n    return function(...next) {\\n      const targetThis = (this !== undefined && typeof globalThis !== 'undefined' && this !== globalThis) ? this : savedThis;\\n      return curried.apply(targetThis, [...args, ...next]);\\n    };\\n  };\\n}\\n```"
+          "content": "```javascript\nfunction compose(...transformers) {\n  return (input) => transformers.reduce((acc, fn) => fn(acc), input);\n}\n```"
         }
       ],
-      "test_suite_js": "\nawait test('Curries 3-argument function step by step', () => {\n    function volume(l, w, h) { return l * w * h; }\n    const curriedVol = curry(volume);\n    assertEqual(curriedVol(2)(3)(4), 24);\n    assertEqual(curriedVol(2, 3)(4), 24);\n    assertEqual(curriedVol(2)(3, 4), 24);\n});\n\nawait test('Preserves context on final execution', () => {\n    const multiplier = {\n        factor: 10,\n        calc(a, b) {\n            return (a + b) * this.factor;\n        }\n    };\n    multiplier.curriedCalc = curry(multiplier.calc);\n    assertEqual(multiplier.curriedCalc(2)(3), 50);\n});\n",
-      "solution_code": "function curry(fn, arity = fn.length) {\n  return function curried(...args) {\n    if (args.length >= arity) {\n      return fn.apply(this, args);\n    }\n    const savedThis = this;\n    return function(...next) {\n      const targetThis = (this !== undefined && typeof globalThis !== 'undefined' && this !== globalThis) ? this : savedThis;\n      return curried.apply(targetThis, [...args, ...next]);\n    };\n  };\n}",
-      "explanation": "Currying recursively accumulates arguments until the target arity is satisfied, forwarding the caller's `this` at the terminal invocation."
+      "test_suite_js": "\nawait test('Pipes through multiple transformation steps', () => {\n    const trim = s => s.trim();\n    const upper = s => s.toUpperCase();\n    const wrap = s => `<<${s}>>`;\n    \n    const pipeline = composedjangoPipeline(trim, upper, wrap);\n    assertEqual(pipeline('  django  '), '<<DJANGO>>');\n});\n",
+      "solution_code": "function composedjangoPipeline(...transformers) {\n  return function(input) {\n    return transformers.reduce((acc, fn) => fn(acc), input);\n  };\n}",
+      "explanation": "Enables modular functional composition for clean, reusable domain transformations."
     },
     {
       "id": 6,
-      "title": "Auto-Binding Object Methods (`bindAll`)",
+      "title": "Property Immutability: django Frozen Registry",
       "difficulty": "Advanced",
       "concepts": [
-        "Object method binding",
-        "Destructuring safety",
-        "In-place mutation",
-        "Object.keys"
+        "Object.freeze",
+        "Deep immutability",
+        "Integrity enforcement"
       ],
-      "description": "\n### Problem Statement\nWrite a helper `bindAll(obj, ...methodNames)` that permanently binds methods on an object to that object.\n\n#### Requirements:\n1. If `methodNames` are provided as arguments, only bind those specific methods on `obj`.\n2. If no `methodNames` are passed, bind ALL function properties found directly on `obj`.\n3. Mutates `obj` by reassigning `obj[method] = obj[method].bind(obj)` for each target method.\n4. Returns `obj` for method chaining.\n",
-      "starter_code": "function bindAll(obj, ...methodNames) {\n  // TODO: Bind specified methods (or all methods) to obj\n  \n  return obj;\n}",
+      "description": "\n### Problem Statement\nIn **django , views , urls , slugs , named views , reversefunction.**, configuration and state snapshots must often be protected from unintended mutation.\n\nWrite `deepFreezedjango(obj)` that recursively freezes an object and all nested objects/arrays.\n\n#### Requirements:\n1. Freezes `obj` using `Object.freeze`.\n2. Recursively freezes all nested object and array properties.\n3. Safely handles primitive values without throwing.\n4. Returns the frozen object.\n",
+      "starter_code": "function deepFreezedjango(obj) {\n  // TODO: Recursively freeze obj and nested structures\n  \n  return obj;\n}",
       "hints": [
         {
           "tier": 1,
           "title": "Conceptual Nudge",
-          "content": "Determine the list of method names: either `methodNames` or `Object.keys(obj).filter(k => typeof obj[k] === 'function')`."
+          "content": "Check `if (obj === null || typeof obj !== 'object') return obj;` before freezing."
         },
         {
           "tier": 2,
           "title": "Approach Strategy",
-          "content": "Iterate over the targets and replace `obj[m] = obj[m].bind(obj)`."
+          "content": "Call `Object.freeze(obj)`, then iterate `Object.keys(obj)` and recursively call `deepFreeze` on child objects."
         },
         {
           "tier": 3,
           "title": "Code Skeleton",
-          "content": "```javascript\nfunction bindAll(obj, ...methodNames) {\n  const methods = methodNames.length > 0 \n    ? methodNames \n    : Object.keys(obj).filter(k => typeof obj[k] === 'function');\n  for (const m of methods) {\n    if (typeof obj[m] === 'function') {\n      obj[m] = obj[m].bind(obj);\n    }\n  }\n  return obj;\n}\n```"
+          "content": "```javascript\nfunction deepFreeze(obj) {\n  if (obj === null || typeof obj !== 'object') return obj;\n  Object.freeze(obj);\n  for (const key of Object.keys(obj)) {\n    deepFreeze(obj[key]);\n  }\n  return obj;\n}\n```"
         }
       ],
-      "test_suite_js": "\nawait test('Binds all methods when none specified', () => {\n    const controller = {\n        name: 'Dashboard',\n        render() { return `Rendering ${this.name}`; },\n        close() { return `Closing ${this.name}`; }\n    };\n    bindAll(controller);\n    \n    const { render, close } = controller;\n    assertEqual(render(), 'Rendering Dashboard');\n    assertEqual(close(), 'Closing Dashboard');\n});\n\nawait test('Binds only specified methods when provided', () => {\n    const person = {\n        name: 'Sam',\n        sayName() { return this.name; },\n        sayAge() { return this.age; },\n        age: 25\n    };\n    bindAll(person, 'sayName');\n    const { sayName, sayAge } = person;\n    assertEqual(sayName(), 'Sam');\n});\n",
-      "solution_code": "function bindAll(obj, ...methodNames) {\n  const methods = methodNames.length > 0\n    ? methodNames\n    : Object.keys(obj).filter(k => typeof obj[k] === 'function');\n    \n  for (const m of methods) {\n    if (typeof obj[m] === 'function') {\n      obj[m] = obj[m].bind(obj);\n    }\n  }\n  return obj;\n}",
-      "explanation": "`bindAll` safeguards against context loss when destructuring methods by locking each method to its host instance."
+      "test_suite_js": "\nawait test('Deeply freezes nested structures', () => {\n    const config = {\n        topic: 'django',\n        settings: { mode: 'strict', retries: 3 },\n        items: [1, 2, { flag: true }]\n    };\n    const frozen = deepFreezedjango(config);\n    assertEqual(Object.isFrozen(frozen), true);\n    assertEqual(Object.isFrozen(frozen.settings), true);\n    assertEqual(Object.isFrozen(frozen.items), true);\n    assertEqual(Object.isFrozen(frozen.items[2]), true);\n});\n",
+      "solution_code": "function deepFreezedjango(obj) {\n  if (obj === null || typeof obj !== 'object') {\n    return obj;\n  }\n  Object.freeze(obj);\n  for (const key of Object.keys(obj)) {\n    deepFreezedjango(obj[key]);\n  }\n  return obj;\n}",
+      "explanation": "Guarantees runtime tamper resistance across configuration states."
     },
     {
       "id": 7,
-      "title": "Context-Forwarding Pipeline (`pipeWithContext`)",
+      "title": "Configurable Factory: django Instance Builder",
       "difficulty": "Advanced",
       "concepts": [
-        "Function composition",
-        "Pipeline architecture",
-        "Context preservation across steps"
+        "Builder pattern",
+        "Fluent API",
+        "Immutable configuration"
       ],
-      "description": "\n### Problem Statement\nWrite `pipeWithContext(...fns)` that composes multiple transformation functions into a pipeline.\n\n#### Requirements:\n1. `pipeWithContext(f1, f2, f3)` returns a function that passes initial input through `f1`, then its result to `f2`, then to `f3`.\n2. **Context Requirement**: Every single function in the pipeline must be executed with the `this` context from the pipeline's call site!\n3. The first function receives `...args`. Subsequent functions receive the single return value of the previous stage.\n",
-      "starter_code": "function pipeWithContext(...fns) {\n  // TODO: Return a pipeline function where all stages share the caller's `this`\n  \n}",
+      "description": "\n### Problem Statement\nDesign a fluent builder `createdjangoBuilder()` that configures and creates `django` execution nodes.\n\n#### Requirements:\n1. `builder.setName(name)`: Sets name and returns builder.\n2. `builder.setParam(key, val)`: Sets custom parameter and returns builder.\n3. `builder.build()`: Returns a sealed object `{ name: string, params: object, execute() }` where `execute()` returns `\"${name} executing with params: ${JSON.stringify(params)}\"`.\n",
+      "starter_code": "function createdjangoBuilder() {\n  // TODO: Implement fluent builder with setName, setParam, build\n  \n}",
       "hints": [
         {
           "tier": 1,
           "title": "Conceptual Nudge",
-          "content": "Use `reduce` or a loop. Use `.apply(this, ...)` or `.call(this, ...)` at each step."
+          "content": "Maintain internal `name` and `params` dictionary in builder."
         },
         {
           "tier": 2,
           "title": "Approach Strategy",
-          "content": "First function gets `fns[0].apply(this, args)`. Then iterate remaining functions using `fn.call(this, acc)`."
+          "content": "Return `this` from setter methods to enable chaining `builder.setName(...).setParam(...)`."
         },
         {
           "tier": 3,
           "title": "Code Skeleton",
-          "content": "```javascript\nfunction pipeWithContext(...fns) {\n  return function(...args) {\n    if (fns.length === 0) return undefined;\n    let acc = fns[0].apply(this, args);\n    for (let i = 1; i < fns.length; i++) {\n      acc = fns[i].call(this, acc);\n    }\n    return acc;\n  };\n}\n```"
+          "content": "```javascript\nfunction createBuilder() {\n  let name = 'default';\n  const params = {};\n  return {\n    setName(n) { name = n; return this; },\n    setParam(k, v) { params[k] = v; return this; },\n    build() {\n      const p = { ...params };\n      return {\n        name,\n        params: p,\n        execute() { return `${name} executing with params: ${JSON.stringify(p)}`; }\n      };\n    }\n  };\n}\n```"
         }
       ],
-      "test_suite_js": "\nawait test('Pipes transformations preserving object state access', () => {\n    const formatter = {\n        prefix: '>> ',\n        suffix: ' <<',\n        trim(s) { return s.trim(); },\n        addPrefix(s) { return this.prefix + s; },\n        addSuffix(s) { return s + this.suffix; }\n    };\n    \n    formatter.format = pipeWithContext(\n        formatter.trim,\n        formatter.addPrefix,\n        formatter.addSuffix\n    );\n    \n    assertEqual(formatter.format('  hello world  '), '>> hello world <<');\n});\n",
-      "solution_code": "function pipeWithContext(...fns) {\n  return function(...args) {\n    if (fns.length === 0) return undefined;\n    let result = fns[0].apply(this, args);\n    for (let i = 1; i < fns.length; i++) {\n      result = fns[i].call(this, result);\n    }\n    return result;\n  };\n}",
-      "explanation": "Standard pipelines often discard context. By invoking every step with `.call(this, ...)`, methods in the pipeline can read and write to instance state."
+      "test_suite_js": "\nawait test('Builds configured instance via fluent chaining', () => {\n    const instance = createdjangoBuilder()\n        .setName('djangoNode')\n        .setParam('env', 'production')\n        .setParam('cluster', 4)\n        .build();\n        \n    assertEqual(instance.name, 'djangoNode');\n    assertEqual(instance.params.env, 'production');\n    assertEqual(instance.params.cluster, 4);\n    assert(instance.execute().includes('djangoNode executing'), 'execute() output matches specification');\n});\n",
+      "solution_code": "function createdjangoBuilder() {\n  let name = 'djangoDefault';\n  const params = {};\n  return {\n    setName(n) {\n      name = n;\n      return this;\n    },\n    setParam(k, v) {\n      params[k] = v;\n      return this;\n    },\n    build() {\n      const snapshotParams = { ...params };\n      const snapshotName = name;\n      return {\n        name: snapshotName,\n        params: snapshotParams,\n        execute() {\n          return `${snapshotName} executing with params: ${JSON.stringify(snapshotParams)}`;\n        }\n      };\n    }\n  };\n}",
+      "explanation": "Fluent builder pattern decouples complex instance construction from operational logic."
     },
     {
       "id": 8,
-      "title": "Bug Hunt: The Broken Widget Timer",
+      "title": "Bug Hunt: django Memoization Edge Cases",
       "difficulty": "Advanced",
       "concepts": [
-        "Callback context loss",
-        "Timer callbacks",
-        "Arrow vs bound methods"
+        "Memoization",
+        "Object hashing",
+        "Cache invalidation"
       ],
-      "description": "\n### Problem Statement\nA developer wrote a `TimerWidget` class that tracks ticks, but when `start()` is invoked, `this.count` is never incremented and errors are thrown because `this` becomes `global` or `undefined` inside `setInterval`.\n\nFix the implementation of `createTimerWidget(name)` so that:\n1. `widget.start(intervalMs)` starts incrementing `this.count` by 1 every `intervalMs`.\n2. `widget.stop()` clears the active interval.\n3. `widget.getReport()` returns `\"${this.name}: ${this.count} ticks\"`.\n4. Even if `widget.tick` or `widget.getReport` is passed as a detached callback, it must not fail.\n",
-      "starter_code": "function createTimerWidget(name) {\n  const widget = {\n    name,\n    count: 0,\n    intervalId: null,\n    tick() {\n      this.count++;\n    },\n    start(intervalMs) {\n      // BUG: this.tick loses this when invoked by setInterval\n      this.intervalId = setInterval(this.tick, intervalMs);\n    },\n    stop() {\n      clearInterval(this.intervalId);\n    },\n    getReport() {\n      return `${this.name}: ${this.count} ticks`;\n    }\n  };\n  return widget;\n}",
+      "description": "\n### Problem Statement\nThe following memoizer function has a critical bug when caching calls with object parameters or different argument counts.\n\nFix `memoizedjango(fn)` so that:\n1. It caches results based on all serialized arguments (`JSON.stringify(args)`).\n2. It correctly distinguishes `fn(1, 2)` from `fn([1, 2])`.\n3. It exposes a `.clear()` method on the returned memoized function to flush its cache.\n",
+      "starter_code": "function memoizedjango(fn) {\n  // BUGGY: Only uses first argument as raw key\n  const cache = {};\n  const memoized = function(firstArg) {\n    if (cache[firstArg]) return cache[firstArg];\n    const res = fn(firstArg);\n    cache[firstArg] = res;\n    return res;\n  };\n  return memoized;\n}",
       "hints": [
         {
           "tier": 1,
           "title": "Conceptual Nudge",
-          "content": "`setInterval(this.tick, intervalMs)` passes `this.tick` as a raw function pointer. When invoked by the runtime, `this` is no longer `widget`."
+          "content": "Use `(...args)` to capture all arguments and `JSON.stringify(args)` as the cache key in a `Map`."
         },
         {
           "tier": 2,
           "title": "Approach Strategy",
-          "content": "Bind `this.tick = this.tick.bind(this)` and `this.getReport = this.getReport.bind(this)`, or use arrow functions."
+          "content": "Attach `memoized.clear = () => cache.clear();` onto the returned function."
         },
         {
           "tier": 3,
           "title": "Code Skeleton",
-          "content": "```javascript\nfunction createTimerWidget(name) {\n  const widget = {\n    name,\n    count: 0,\n    intervalId: null,\n    tick() { this.count++; },\n    start(intervalMs) { this.intervalId = setInterval(() => this.tick(), intervalMs); },\n    stop() { clearInterval(this.intervalId); },\n    getReport() { return `${this.name}: ${this.count} ticks`; }\n  };\n  widget.tick = widget.tick.bind(widget);\n  widget.getReport = widget.getReport.bind(widget);\n  return widget;\n}\n```"
+          "content": "```javascript\nfunction memoize(fn) {\n  const cache = new Map();\n  const memoized = function(...args) {\n    const key = JSON.stringify(args);\n    if (cache.has(key)) return cache.get(key);\n    const result = fn.apply(this, args);\n    cache.set(key, result);\n    return result;\n  };\n  memoized.clear = () => cache.clear();\n  return memoized;\n}\n```"
         }
       ],
-      "test_suite_js": "\nawait test('Timer correctly increments count and generates report', async () => {\n    const w = createTimerWidget('CounterA');\n    w.start(10);\n    await new Promise(r => setTimeout(r, 45));\n    w.stop();\n    assert(w.count >= 2, `Count should be at least 2, got ${w.count}`);\n    \n    // Detached report call\n    const reporter = w.getReport;\n    assertEqual(reporter(), `CounterA: ${w.count} ticks`);\n});\n",
-      "solution_code": "function createTimerWidget(name) {\n  const widget = {\n    name,\n    count: 0,\n    intervalId: null,\n    tick() {\n      this.count++;\n    },\n    start(intervalMs) {\n      this.intervalId = setInterval(this.tick, intervalMs);\n    },\n    stop() {\n      clearInterval(this.intervalId);\n    },\n    getReport() {\n      return `${this.name}: ${this.count} ticks`;\n    }\n  };\n  widget.tick = widget.tick.bind(widget);\n  widget.getReport = widget.getReport.bind(widget);\n  return widget;\n}",
-      "explanation": "Binding `tick` and `getReport` directly on the instance ensures that both timer callbacks and detached references always retain access to the instance properties."
+      "test_suite_js": "\nawait test('Correctly memoizes multi-arg functions and allows clearing', () => {\n    let callCount = 0;\n    const add = (a, b) => { callCount++; return a + b; };\n    const memo = memoizedjango(add);\n    \n    assertEqual(memo(2, 3), 5);\n    assertEqual(callCount, 1);\n    assertEqual(memo(2, 3), 5);\n    assertEqual(callCount, 1, 'Hits cache on identical args');\n    \n    memo.clear();\n    assertEqual(memo(2, 3), 5);\n    assertEqual(callCount, 2, 'Re-executes after cache clear');\n});\n",
+      "solution_code": "function memoizedjango(fn) {\n  const cache = new Map();\n  const memoized = function(...args) {\n    const key = JSON.stringify(args);\n    if (cache.has(key)) {\n      return cache.get(key);\n    }\n    const result = fn.apply(this, args);\n    cache.set(key, result);\n    return result;\n  };\n  memoized.clear = () => cache.clear();\n  return memoized;\n}",
+      "explanation": "Fixes argument serialization and provides explicit cache invalidation mechanisms."
     },
     {
       "id": 9,
-      "title": "Safe Method Borrower with Argument Prepending",
+      "title": "Concurrency & Rate-Limiting: django Throttle",
       "difficulty": "Expert",
       "concepts": [
-        "Method borrowing",
-        "Generic function extraction",
-        "Argument forwarding",
-        "Polymorphism"
+        "Throttling",
+        "Timestamp windows",
+        "Trailing edge calls"
       ],
-      "description": "\n### Problem Statement\nMethod borrowing allows an object to use a method belonging to another object or prototype (e.g. `Array.prototype.join`).\n\nWrite `borrowMethod(sourceProto, methodName, targetObj, ...fixedArgs)` that borrows a method and packages it for `targetObj`.\n\n#### Requirements:\n1. Returns a function bound to `targetObj`.\n2. Any `fixedArgs` passed to `borrowMethod` are prepended before runtime arguments.\n3. If `sourceProto[methodName]` does not exist or is not a function, throw a `TypeError`.\n4. The borrowed method executes with `this === targetObj`.\n",
-      "starter_code": "function borrowMethod(sourceProto, methodName, targetObj, ...fixedArgs) {\n  // TODO: Safely borrow method from sourceProto and bind to targetObj with fixedArgs\n  \n}",
+      "description": "\n### Problem Statement\nImplement a rate-limiter `throttledjango(fn, limitMs)` for high-frequency events in **django , views , urls , slugs , named views , reversefunction.**.\n\n#### Requirements:\n1. Executes `fn` immediately on first invocation.\n2. Ignores subsequent invocations within `limitMs` duration.\n3. Forwards `this` and arguments properly.\n",
+      "starter_code": "function throttledjango(fn, limitMs) {\n  // TODO: Throttle execution of fn to once per limitMs\n  \n}",
       "hints": [
         {
           "tier": 1,
           "title": "Conceptual Nudge",
-          "content": "Check `typeof sourceProto[methodName] !== 'function'` first. Then return a function calling `sourceProto[methodName].apply(targetObj, ...)`."
+          "content": "Track `lastCallTime = 0` and compare `Date.now() - lastCallTime >= limitMs`."
         },
         {
           "tier": 2,
           "title": "Approach Strategy",
-          "content": "Validate the method, then return `(...runtimeArgs) => method.apply(targetObj, [...fixedArgs, ...runtimeArgs])`."
+          "content": "If enough time passed, update `lastCallTime = Date.now()` and return `fn.apply(this, args)`."
         },
         {
           "tier": 3,
           "title": "Code Skeleton",
-          "content": "```javascript\nfunction borrowMethod(sourceProto, methodName, targetObj, ...fixedArgs) {\n  const fn = sourceProto ? sourceProto[methodName] : undefined;\n  if (typeof fn !== 'function') {\n    throw new TypeError(`Method ${methodName} not found`);\n  }\n  return function(...runtime) {\n    return fn.apply(targetObj, [...fixedArgs, ...runtime]);\n  };\n}\n```"
+          "content": "```javascript\nfunction throttle(fn, limitMs) {\n  let last = 0;\n  return function(...args) {\n    const now = Date.now();\n    if (now - last >= limitMs) {\n      last = now;\n      return fn.apply(this, args);\n    }\n  };\n}\n```"
         }
       ],
-      "test_suite_js": "\nawait test('Borrows Array.prototype method onto array-like object', () => {\n    const arrayLike = { 0: 'a', 1: 'b', 2: 'c', length: 3 };\n    const customJoin = borrowMethod(Array.prototype, 'join', arrayLike, '-');\n    assertEqual(customJoin(), 'a-b-c');\n});\n\nawait test('Throws TypeError on non-existent method', () => {\n    let threw = false;\n    try {\n        borrowMethod({}, 'nonExistent', {});\n    } catch (e) {\n        threw = (e instanceof TypeError);\n    }\n    assert(threw, 'Expected TypeError for missing method');\n});\n",
-      "solution_code": "function borrowMethod(sourceProto, methodName, targetObj, ...fixedArgs) {\n  const method = sourceProto ? sourceProto[methodName] : undefined;\n  if (typeof method !== 'function') {\n    throw new TypeError(`Method '${methodName}' is not a function`);\n  }\n  return function(...runtimeArgs) {\n    return method.apply(targetObj, [...fixedArgs, ...runtimeArgs]);\n  };\n}",
-      "explanation": "Method borrowing extracts generic methods and pairs them with arbitrary targets and pre-configured arguments using `.apply(targetObj, combinedArgs)`."
+      "test_suite_js": "\nawait test('Throttles rapid calls within time limit', async () => {\n    let count = 0;\n    const trigger = throttledjango(() => count++, 50);\n    \n    trigger();\n    trigger();\n    trigger();\n    assertEqual(count, 1, 'Only first call executes immediately');\n    \n    await new Promise(r => setTimeout(r, 60));\n    trigger();\n    assertEqual(count, 2, 'Executes again after delay');\n});\n",
+      "solution_code": "function throttledjango(fn, limitMs) {\n  let lastCall = 0;\n  return function(...args) {\n    const now = Date.now();\n    if (now - lastCall >= limitMs) {\n      lastCall = now;\n      return fn.apply(this, args);\n    }\n  };\n}",
+      "explanation": "Guarantees throughput control and prevents event flooding across high-frequency interfaces."
     },
     {
       "id": 10,
-      "title": "Diagnostic: Dynamic Context Switchboard",
+      "title": "Diagnostic Challenge: django System Orchestrator",
       "difficulty": "Expert",
       "concepts": [
-        "Dynamic context switching",
-        "Handler registry",
-        "Partial argument injection",
-        "Unbinding"
+        "Orchestrator pattern",
+        "Error recovery",
+        "Telemetry dispatch",
+        "Fallback execution"
       ],
-      "description": "\n### Problem Statement\nBuild a `createSwitchboard()` registry that manages event handlers with dynamic context reassignment and partial argument binding.\n\n#### Requirements:\n1. `switchboard.register(event, handler, defaultContext, ...defaultArgs)`:\n   - Registers a handler function for an event name.\n2. `switchboard.trigger(event, overrideContext, ...triggerArgs)`:\n   - Invokes all registered handlers for `event`.\n   - Uses `overrideContext` as `this` if provided; otherwise falls back to `defaultContext` registered with the handler.\n   - Arguments received by handler must be `[...defaultArgs, ...triggerArgs]`.\n   - Returns an array containing the results of each handler executed in order.\n3. `switchboard.unbind(event)`:\n   - Removes all handlers for `event`.\n",
-      "starter_code": "function createSwitchboard() {\n  const events = new Map();\n\n  return {\n    register(event, handler, defaultContext, ...defaultArgs) {\n      // TODO: Register handler with context and partial arguments\n      \n    },\n    trigger(event, overrideContext, ...triggerArgs) {\n      // TODO: Execute handlers with overrideContext || defaultContext\n      \n    },\n    unbind(event) {\n      // TODO: Clear handlers for event\n      \n    }\n  };\n}",
+      "description": "\n### Problem Statement\nConstruct a comprehensive resilient orchestrator `createdjangoOrchestrator()` for the **django , views , urls , slugs , named views , reversefunction.** domain.\n\n#### Requirements:\n1. `orchestrator.register(name, handler)`: Registers a named task.\n2. `orchestrator.execute(name, payload, fallbackHandler)`:\n   - Attempts to run `handler(payload)`.\n   - If `handler` succeeds, returns `{ success: true, result, error: null }`.\n   - If `handler` throws and `fallbackHandler` is provided, runs `fallbackHandler(payload)` and returns `{ success: true, result: fallbackResult, error: originalError.message, recovered: true }`.\n   - If `handler` throws without fallback, returns `{ success: false, result: null, error: err.message }`.\n3. `orchestrator.getStats()`:\n   - Returns `{ total: number, successes: number, failures: number }`.\n",
+      "starter_code": "function createdjangoOrchestrator() {\n  // TODO: Build orchestrator with register, execute, and getStats\n  \n}",
       "hints": [
         {
           "tier": 1,
           "title": "Conceptual Nudge",
-          "content": "Store an array of `{ handler, defaultContext, defaultArgs }` objects per event in the Map."
+          "content": "Store handlers in a `Map` and track counters for total, successes, failures in closure."
         },
         {
           "tier": 2,
           "title": "Approach Strategy",
-          "content": "When triggering, loop through items. Compute `ctx = (overrideContext !== undefined && overrideContext !== null) ? overrideContext : item.defaultContext`. Invoke `item.handler.apply(ctx, [...item.defaultArgs, ...triggerArgs])`."
+          "content": "Wrap `execute` in a `try...catch`. Check for fallback in the catch block before registering a failure."
         },
         {
           "tier": 3,
           "title": "Code Skeleton",
-          "content": "```javascript\nfunction createSwitchboard() {\n  const events = new Map();\n  return {\n    register(event, handler, defaultContext, ...defaultArgs) {\n      if (!events.has(event)) events.set(event, []);\n      events.get(event).push({ handler, defaultContext, defaultArgs });\n    },\n    trigger(event, overrideContext, ...triggerArgs) {\n      const handlers = events.get(event) || [];\n      return handlers.map(h => {\n        const ctx = overrideContext !== undefined ? overrideContext : h.defaultContext;\n        return h.handler.apply(ctx, [...h.defaultArgs, ...triggerArgs]);\n      });\n    },\n    unbind(event) {\n      events.delete(event);\n    }\n  };\n}\n```"
+          "content": "```javascript\nfunction createOrchestrator() {\n  const handlers = new Map();\n  let stats = { total: 0, successes: 0, failures: 0 };\n  return {\n    register(name, fn) { handlers.set(name, fn); },\n    execute(name, payload, fallback) {\n      stats.total++;\n      const fn = handlers.get(name);\n      if (!fn) {\n        stats.failures++;\n        return { success: false, result: null, error: `Handler not found: ${name}` };\n      }\n      try {\n        const res = fn(payload);\n        stats.successes++;\n        return { success: true, result: res, error: null };\n      } catch (err) {\n        if (typeof fallback === 'function') {\n          try {\n            const fbRes = fallback(payload);\n            stats.successes++;\n            return { success: true, result: fbRes, error: err.message, recovered: true };\n          } catch (fbErr) {\n            stats.failures++;\n            return { success: false, result: null, error: fbErr.message };\n          }\n        }\n        stats.failures++;\n        return { success: false, result: null, error: err.message };\n      }\n    },\n    getStats() { return { ...stats }; }\n  };\n}\n```"
         }
       ],
-      "test_suite_js": "\nawait test('Executes handlers with default context and partial args', () => {\n    const sb = createSwitchboard();\n    const serviceA = { id: 'A', log(level, msg) { return `[${this.id}] ${level}: ${msg}`; } };\n    \n    sb.register('alert', serviceA.log, serviceA, 'WARN');\n    const results = sb.trigger('alert', null, 'Disk space low');\n    assertEqual(results, ['[A] WARN: Disk space low']);\n});\n\nawait test('Allows overriding context on trigger', () => {\n    const sb = createSwitchboard();\n    function format(tag) { return `${tag} by ${this.user}`; }\n    \n    sb.register('action', format, { user: 'Default' }, '#audit');\n    const results = sb.trigger('action', { user: 'Admin' });\n    assertEqual(results, ['#audit by Admin']);\n});\n\nawait test('Unbind clears handlers', () => {\n    const sb = createSwitchboard();\n    sb.register('ping', () => 'pong', null);\n    assertEqual(sb.trigger('ping'), ['pong']);\n    sb.unbind('ping');\n    assertEqual(sb.trigger('ping'), []);\n});\n",
-      "solution_code": "function createSwitchboard() {\n  const events = new Map();\n\n  return {\n    register(event, handler, defaultContext, ...defaultArgs) {\n      if (!events.has(event)) {\n        events.set(event, []);\n      }\n      events.get(event).push({ handler, defaultContext, defaultArgs });\n    },\n    trigger(event, overrideContext, ...triggerArgs) {\n      const handlers = events.get(event) || [];\n      return handlers.map(h => {\n        const ctx = (overrideContext !== null && overrideContext !== undefined)\n          ? overrideContext\n          : h.defaultContext;\n        return h.handler.apply(ctx, [...h.defaultArgs, ...triggerArgs]);\n      });\n    },\n    unbind(event) {\n      events.delete(event);\n    }\n  };\n}",
-      "explanation": "A context switchboard demonstrates mastery of dynamic context resolution: handlers hold default contexts and partial arguments that can be dynamically overridden at trigger time."
+      "test_suite_js": "\nawait test('Executes registered tasks and updates stats', () => {\n    const orch = createdjangoOrchestrator();\n    orch.register('format', (d) => `[django: ${d.val}]`);\n    \n    const res = orch.execute('format', { val: 'active' });\n    assertEqual(res.success, true);\n    assertEqual(res.result, '[django: active]');\n    \n    const stats = orch.getStats();\n    assertEqual(stats.total, 1);\n    assertEqual(stats.successes, 1);\n});\n\nawait test('Recovers via fallback handler on primary failure', () => {\n    const orch = createdjangoOrchestrator();\n    orch.register('failing', () => { throw new Error('Primary failed'); });\n    \n    const res = orch.execute('failing', { val: 123 }, () => 'fallback-ok');\n    assertEqual(res.success, true);\n    assertEqual(res.result, 'fallback-ok');\n    assertEqual(res.recovered, true);\n});\n",
+      "solution_code": "function createdjangoOrchestrator() {\n  const handlers = new Map();\n  const stats = { total: 0, successes: 0, failures: 0 };\n  return {\n    register(name, fn) {\n      handlers.set(name, fn);\n    },\n    execute(name, payload, fallback) {\n      stats.total++;\n      const fn = handlers.get(name);\n      if (!fn) {\n        stats.failures++;\n        return { success: false, result: null, error: `Handler '${name}' not found` };\n      }\n      try {\n        const res = fn(payload);\n        stats.successes++;\n        return { success: true, result: res, error: null };\n      } catch (err) {\n        if (typeof fallback === 'function') {\n          try {\n            const fbRes = fallback(payload);\n            stats.successes++;\n            return { success: true, result: fbRes, error: err.message, recovered: true };\n          } catch (fbErr) {\n            stats.failures++;\n            return { success: false, result: null, error: fbErr.message };\n          }\n        }\n        stats.failures++;\n        return { success: false, result: null, error: err.message };\n      }\n    },\n    getStats() {\n      return { ...stats };\n    }\n  };\n}",
+      "explanation": "Complete diagnostic pattern demonstrating resilient task execution and telemetry for django , views , urls , slugs , named views , reversefunction.."
     }
   ]
 }

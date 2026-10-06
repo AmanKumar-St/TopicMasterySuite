@@ -40,6 +40,15 @@ class AIEvaluator:
         )
         self.codecraft_base = self.config.get("ai_backend", {}).get("codecraft", {}).get("base_url", "https://api.codecraft.ai/v1")
 
+        self.runinfra_key = os.environ.get(
+            "RUNINFRA_GATEWAY_KEY",
+            self.config.get("ai_backend", {}).get("runinfra", {}).get("api_key", "")
+        )
+        self.runinfra_base = self.config.get("ai_backend", {}).get("runinfra", {}).get("base_url", "https://api.runinfra.ai/v1")
+        self.runinfra_models = self.config.get("ai_backend", {}).get("runinfra", {}).get("models", [
+            "glm-5-3-flash"
+        ])
+
         eval_cfg = self.config.get("evaluation", {})
         self.temperature = eval_cfg.get("temperature", 0.1)
         self.max_tokens = eval_cfg.get("max_tokens", 2500)
@@ -117,6 +126,40 @@ class AIEvaluator:
         except Exception:
             return None
 
+    def _call_runinfra(self, model: str, system_prompt: str, user_prompt: str, max_tokens: Optional[int] = None) -> Optional[str]:
+        if not self.runinfra_key or self.runinfra_key.startswith("${"):
+            return None
+
+        import uuid
+        url = f"{self.runinfra_base}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.runinfra_key}",
+            "Content-Type": "application/json",
+            "X-Client-Request-Id": str(uuid.uuid4())
+        }
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": self.temperature,
+            "max_tokens": max_tokens or self.max_tokens
+        }
+
+        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                choice = data.get("choices", [{}])[0]
+                msg = choice.get("message", {})
+                content = msg.get("content")
+                if not content:
+                    content = msg.get("reasoning")
+                return content
+        except Exception:
+            return None
+
     def chat_complete(self, system_prompt: str, user_prompt: str, max_tokens: Optional[int] = None) -> Optional[str]:
         """
         Executes a prompt across the priority chain with fast failover.
@@ -129,6 +172,11 @@ class AIEvaluator:
         cc_content = self._call_codecraft(system_prompt, user_prompt)
         if cc_content:
             return cc_content
+
+        for model in self.runinfra_models:
+            content = self._call_runinfra(model, system_prompt, user_prompt, max_tokens)
+            if content:
+                return content
 
         return None
 
@@ -235,16 +283,6 @@ Return JSON with this schema:
         Dynamically generates 10 progressive difficulty questions strictly tailored to the topic
         following the 10-tier blueprint in plan.md.
         """
-        topic_lower = (topic or "").lower()
-
-        # Check curated topics for instant, deterministic, zero-latency high quality
-        if any(k in topic_lower for k in ["bind", "partial", "lost this", "context", "curry"]):
-            from topic_curriculum import BINDING_AND_PARTIALS_QUESTIONS
-            return BINDING_AND_PARTIALS_QUESTIONS
-        elif any(k in topic_lower for k in ["decorator", "caching", "spy", "borrowing"]):
-            from questions import ALL_QUESTIONS
-            return ALL_QUESTIONS
-
         system_prompt = (
             "You are a principal software engineering instructor. "
             "Generate an interactive 10-question progressive mastery test suite tailored specifically to the given topic. "
