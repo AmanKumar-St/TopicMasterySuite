@@ -21,7 +21,7 @@ def build_notebook(topic: str = "function binding , lost this , partial function
     cells = []
 
     # Title Markdown Cell
-    cells.append(nbf.v4.new_markdown_cell(f"""# 🚀 Dynamic JavaScript Mastery Suite
+    cells.append(nbf.v4.new_markdown_cell(f"""# 🚀 Dynamic TOPIC Mastery Suite
 ### Topic: {topic}
 Run the setup cell below, then solve each question and run its `evaluate(...)` cell for instant feedback.
 """))
@@ -40,7 +40,7 @@ set_topic(TOPIC)
     for q in BINDING_AND_PARTIALS_QUESTIONS:
         qid = q["id"]
         title = q["title"]
-        starter = q.get("starter_code", "// Write your JavaScript code here")
+        starter = q.get("starter_code", "// Write your code here")
 
         # Question Display Cell
         view_cell = f"""# === QUESTION {qid}: {title} ===
@@ -50,7 +50,7 @@ show({qid})
 
         # Answer Solution Cell
         ans_cell = f"""# === QUESTION {qid} ANSWER CELL ===
-# Write your JavaScript solution below:
+# Write your solution below:
 q{qid}_solution = \"\"\"{starter}\"\"\"
 """
         cells.append(nbf.v4.new_code_cell(ans_cell))

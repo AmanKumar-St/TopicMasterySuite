@@ -15,6 +15,11 @@ ai_backend:
     base_url: "https://api.codecraft.ai/v1"
     models:
       - "codecraft-coder-v1"
+  runinfra:
+    api_key: "${RUNINFRA_GATEWAY_KEY}"
+    base_url: "https://api.runinfra.ai/v1"
+    models:
+      - "glm-5-3-flash"
 
 evaluation:
   temperature: 0.1
