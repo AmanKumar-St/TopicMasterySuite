@@ -19,14 +19,41 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _is_placeholder(value: str) -> bool:
+    """Check if a value is a placeholder like ${VAR_NAME}."""
+    return isinstance(value, str) and value.startswith("${") and value.endswith("}")
+
+
+def _validate_api_key(key: str, provider: str) -> str:
+    """
+    Validate API key and return empty string if invalid/placeholder.
+    Logs warning for placeholder values.
+    """
+    if not key or _is_placeholder(key):
+        if key and _is_placeholder(key):
+            import warnings
+            warnings.warn(
+                f"{provider} API key is a placeholder ('{key}'). "
+                f"Set the actual key in environment variable or config.yaml. "
+                f"Falling back to no key (provider will be skipped).",
+                UserWarning,
+                stacklevel=3
+            )
+        return ""
+    return key
+
+
 class AIEvaluator:
     def __init__(self, config_path: str = "config.yaml"):
         self.config_path = config_path
         self.config = self._load_config()
 
-        self.openrouter_key = os.environ.get(
-            "OPENROUTER_API_KEY",
-            self.config.get("ai_backend", {}).get("openrouter", {}).get("api_key", "")
+        self.openrouter_key = _validate_api_key(
+            os.environ.get(
+                "OPENROUTER_API_KEY",
+                self.config.get("ai_backend", {}).get("openrouter", {}).get("api_key", "")
+            ),
+            "OpenRouter"
         )
         self.openrouter_base = self.config.get("ai_backend", {}).get("openrouter", {}).get("base_url", "https://openrouter.ai/api/v1")
         self.openrouter_models = self.config.get("ai_backend", {}).get("openrouter", {}).get("models", [
@@ -34,11 +61,26 @@ class AIEvaluator:
             "qwen/qwen3.8-27b:free"
         ])
 
-        self.codecraft_key = os.environ.get(
-            "CODECRAFT_API_KEY",
-            self.config.get("ai_backend", {}).get("codecraft", {}).get("api_key", "")
+        self.codecraft_key = _validate_api_key(
+            os.environ.get(
+                "CODECRAFT_API_KEY",
+                self.config.get("ai_backend", {}).get("codecraft", {}).get("api_key", "")
+            ),
+            "CodeCraft"
         )
         self.codecraft_base = self.config.get("ai_backend", {}).get("codecraft", {}).get("base_url", "https://api.codecraft.ai/v1")
+
+        self.runinfra_key = _validate_api_key(
+            os.environ.get(
+                "RUNINFRA_GATEWAY_KEY",
+                self.config.get("ai_backend", {}).get("runinfra", {}).get("api_key", "")
+            ),
+            "RunInfra"
+        )
+        self.runinfra_base = self.config.get("ai_backend", {}).get("runinfra", {}).get("base_url", "https://api.runinfra.ai/v1")
+        self.runinfra_models = self.config.get("ai_backend", {}).get("runinfra", {}).get("models", [
+            "glm-5-3-flash"
+        ])
 
         eval_cfg = self.config.get("evaluation", {})
         self.temperature = eval_cfg.get("temperature", 0.1)
@@ -56,6 +98,8 @@ class AIEvaluator:
         return {}
 
     def _call_openrouter(self, model: str, system_prompt: str, user_prompt: str, max_tokens: Optional[int] = None) -> Optional[str]:
+        if not self.openrouter_key:
+            return None
         url = f"{self.openrouter_base}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.openrouter_key}",
@@ -91,7 +135,7 @@ class AIEvaluator:
             return None
 
     def _call_codecraft(self, system_prompt: str, user_prompt: str) -> Optional[str]:
-        if not self.codecraft_key or self.codecraft_key.startswith("${"):
+        if not self.codecraft_key:
             return None
 
         url = f"{self.codecraft_base}/chat/completions"
@@ -117,6 +161,40 @@ class AIEvaluator:
         except Exception:
             return None
 
+    def _call_runinfra(self, model: str, system_prompt: str, user_prompt: str, max_tokens: Optional[int] = None) -> Optional[str]:
+        if not self.runinfra_key:
+            return None
+
+        import uuid
+        url = f"{self.runinfra_base}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.runinfra_key}",
+            "Content-Type": "application/json",
+            "X-Client-Request-Id": str(uuid.uuid4())
+        }
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": self.temperature,
+            "max_tokens": max_tokens or self.max_tokens
+        }
+
+        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                choice = data.get("choices", [{}])[0]
+                msg = choice.get("message", {})
+                content = msg.get("content")
+                if not content:
+                    content = msg.get("reasoning")
+                return content
+        except Exception:
+            return None
+
     def chat_complete(self, system_prompt: str, user_prompt: str, max_tokens: Optional[int] = None) -> Optional[str]:
         """
         Executes a prompt across the priority chain with fast failover.
@@ -129,6 +207,11 @@ class AIEvaluator:
         cc_content = self._call_codecraft(system_prompt, user_prompt)
         if cc_content:
             return cc_content
+
+        for model in self.runinfra_models:
+            content = self._call_runinfra(model, system_prompt, user_prompt, max_tokens)
+            if content:
+                return content
 
         return None
 
