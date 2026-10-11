@@ -1,21 +1,4 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.venv/
-venv/
 .env
-
-# Jupyter
+.topic_mastery_history.json
+__pycache__/
 .ipynb_checkpoints/
-
-# Node
-node_modules/
-npm-debug.log*
-
-# Temp
-tmp/
-*.tmp
-
-#secret
-config.yaml

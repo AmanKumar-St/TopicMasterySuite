@@ -1,81 +1,55 @@
-# JavaScript Decorators & call/apply Mastery Test Suite
+# 🎯 Topic Mastery Suite
 
-An interactive Jupyter Notebook test suite with automated Node.js execution and AI-powered pedagogical evaluation.
+Master **any topic** you just learned — entirely inside a Jupyter notebook.
 
----
+No hardcoded questions. No templates. No deterministic answer keys. Everything is generated and graded live by an LLM.
 
-## 🌟 Features
+## How it works
 
-- **Interactive Topic Intake & Curriculum Diagnostic (Cell 1):** Enter what topics you learned today to receive an AI-generated learning blueprint, core mental models, and common pitfalls to avoid.
-- **10 Progressive Mastery Challenges:**
-  1. **Q1:** Transparent Caching with Context (`func.call`, `this` forwarding)
-  2. **Q2:** Spy Decorator with Call History (`func.apply`, function metadata)
-  3. **Q3:** Method Borrowing Deep-Dive (`[].slice.call`, array-like objects)
-  4. **Q4:** Debounce with Context Preservation (`setTimeout`, trailing capture)
-  5. **Q5:** Decorator Composition Engine (onion-skin reduction flow)
-  6. **Q6:** Preserving Function Properties & Metadata (`Object.getOwnPropertyDescriptors`)
-  7. **Q7:** Curried Retry Decorator Factory (async retry loop + backoff)
-  8. **Q8:** Lexical Scope & Arguments Bug Hunt (arrow function vs `function` keyword)
-  9. **Q9:** Async Concurrency Limiter Decorator (Promise queues + pacing)
-  10. **Q10:** Chained Decorator Diagnostic & Context Recovery
-- **Deterministic Node.js Sandbox:** Every solution is executed in Node.js against real unit test suites.
-- **Multi-Model Free AI Routing:** Cascading fallback across top free models (`qwen/qwen3.8-27b:free`, `google/gemma-4-31b-it:free`, `nvidia/nemotron-3.5-lightning:free`, `cohere/north-mini-code:free`, `openrouter/free`) and CodeCraft API fallback.
-- **Progressive Disclosure:** 3-tier collapsible hints (Conceptual Nudge $\rightarrow$ Strategy $\rightarrow$ Code Skeleton).
-- **Mastery Dashboard:** Aggregated report card, average score, and rank badge.
+1. **Enter your topic** — *"Python decorators"*, *"the Krebs cycle"*, *"French Revolution"*, anything.
+2. **The AI analyzes it** — identifies the subject/language, and if the topic is too broad, **asks you clarifying questions** before continuing.
+3. **Run `new_question()`** — a fresh, unique question is generated and an **empty answer cell appears below it**.
+4. **Write your answer in that cell and run it** — the AI grades it instantly:
+   - ✅ correct / 🟡 partially correct / ❌ incorrect
+   - score out of 10, detailed feedback, **and a model answer** to study from
+5. Repeat — every question is **guaranteed unique** (session history is persisted in `.topic_mastery_history.json`, so no repeats even across sessions).
 
----
+## Quickstart
 
-## 🚀 Quickstart Guide
-
-### 1. Requirements
-Ensure you have **Python 3.10+** and **Node.js 18+** installed.
-
-```bash
-# Verify installations
-python --version
-node --version
-```
-
-### 2. Install Python Dependencies
 ```bash
 pip install -r requirements.txt
+cp .env.example .env   # add ONE API key (or run Ollama locally — no key needed)
+jupyter notebook       # open TopicMastery.ipynb and run the cells top to bottom
 ```
 
-### 3. Launch Jupyter
-```bash
-jupyter lab
-# or
-jupyter notebook
+## LLM providers (auto-detected, in this order)
+
+| Provider | Env var | Notes |
+|---|---|---|
+| OpenRouter | `OPENROUTER_API_KEY` | Free models available, automatic fallback across them |
+| Google Gemini | `GEMINI_API_KEY` | Free tier available |
+| OpenAI | `OPENAI_API_KEY` | Defaults to `gpt-4o-mini` |
+| Ollama | *(none)* | Local & free — just `ollama serve` |
+
+## Notebook commands
+
+| Command | What it does |
+|---|---|
+| `new_question()` | Generates a unique question + opens an empty answer cell |
+| `new_question("hard")` | Force a difficulty (`easy` / `medium` / `hard` / `auto`) |
+| `check_answer(my_answer)` | AI grades your answer (already in the answer cell) |
+| `hint()` | Socratic hint for the current question |
+| `session_report()` | Scorecard for the session |
+
+## Files
+
+```
+TopicMastery.ipynb          ← the notebook (start here)
+topic_mastery_engine.py     ← the LLM engine (analysis, generation, evaluation)
+requirements.txt
+.env.example
 ```
 
-Open `decorator_mastery_test.ipynb` and run the cells sequentially!
+## Why no tests / no question bank?
 
----
-
-## ⚙️ Configuration (`config.yaml`)
-
-Your API keys and model routing priorities are managed in `config.yaml`:
-
-```yaml
-ai_backend:
-  primary: "openrouter"
-  fallback: "codecraft"
-  openrouter:
-    api_key: "sk-or-v1-..."
-    base_url: "https://openrouter.ai/api/v1"
-    models:
-      - "qwen/qwen3.8-27b:free"
-      - "google/gemma-4-31b-it:free"
-      - "nvidia/nemotron-3.5-lightning:free"
-      - "cohere/north-mini-code:free"
-      - "openrouter/free"
-```
-
----
-
-## 🧪 Testing the Harness
-
-Run deterministic validation across all 10 questions:
-```bash
-python test_all_questions.py
-```
+That's the point. The previous version of this project had 10 hardcoded JavaScript questions with deterministic Node.js tests. This rebuild deletes that entire approach: question generation and answer evaluation are both pure LLM calls, guided by prompts and a repetition-guard history file — so the suite works for **any subject**, not just one programming topic.
